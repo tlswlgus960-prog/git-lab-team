@@ -1,0 +1,39 @@
+# M7 TripoSR 전용 환경(serving/.venv-m7, Python 3.11) 설치 결과 고정 — research R-22 M7 실행 환경, T131
+# 재현: python3.11 -m venv serving/.venv-m7 && pip install -r 이 파일(torchmcubes는 --no-build-isolation, 빌드 의존 scikit-build-core·pybind11·ninja·cmake 먼저)
+# numpy<2 고정(trimesh 4.0.5 GLB 내보내기). rembg·onnxruntime은 설치하지 않는다(M1 컷아웃 입력)
+antlr4-python3-runtime==4.9.3
+certifi==2026.7.22
+charset-normalizer==3.5.1
+cmake==4.4.3
+einops==0.7.0
+filelock==4.0.6
+fsspec==2026.9.0
+huggingface-hub==0.17.3
+idna==3.20
+ImageIO==2.38.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+mpmath==1.3.0
+networkx==3.6.1
+ninja==1.13.2
+numpy==1.26.4
+omegaconf==2.3.0
+packaging==26.3
+pathspec==1.1.1
+Pillow==10.1.0
+pybind11==3.1.0
+PyYAML==6.0.3
+regex==2026.9.29
+requests==2.34.2
+safetensors==0.8.0
+scikit_build_core==1.1.0
+sympy==1.14.0
+tokenizers==0.14.1
+torch==2.4.1
+torchmcubes @ git+https://github.com/tatsy/torchmcubes.git@879926d0ef58e6ce0ac2630fdecb5e53af7ed3ff
+torchvision==0.19.1
+tqdm==4.70.1
+transformers==4.35.0
+trimesh==4.0.5
+typing_extensions==4.16.0
+urllib3==2.8.0

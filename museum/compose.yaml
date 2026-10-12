@@ -1,0 +1,134 @@
+name: museum-local
+
+x-app-environment: &app-environment
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_NAME: museum_local
+  DB_USER: museum
+  DB_PASSWORD: ${DB_PASSWORD:?Copy .env.example to .env and set DB_PASSWORD}
+  STORAGE_ROOT: /museum/store
+  MODEL_MANIFEST: /museum/models/manifest.yaml
+  MODEL_ROOT: /museum/models
+  UAM_RUN_DIR: /museum/run
+  GPU_ENABLED: "false"
+  UAM_FAKE_MODELS: "0"
+  CAPTION_ENABLED: "false"
+  MODEL_CHECK_ENABLED: "false"
+  MODEL_API_INTERNAL_URL: http://model:9541
+  APP_HOST: 0.0.0.0
+  MODEL_API_HOST: 0.0.0.0
+  APP_PORT: "9521"
+  SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
+  AUTH_HMAC_SECRET: ${AUTH_HMAC_SECRET:?Set AUTH_HMAC_SECRET in .env}
+  SECURE_COOKIES: "false"
+  APP_BASE_URL: http://127.0.0.1:${WEB_PORT:-9501}
+  FILES_ACCEL: "0"
+  MAIL_ENABLED: "true"
+  MAIL_SMTP_URL: smtp://mail:1025
+  MAIL_FROM: no-reply@localhost
+
+services:
+  db:
+    image: mariadb:12.0.2
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+      MARIADB_DATABASE: museum_local
+      MARIADB_USER: museum
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mail:
+    image: axllent/mailpit:v1.27.8
+    ports:
+      - "127.0.0.1:${MAIL_PORT:-8025}:8025"
+
+  migrate:
+    build:
+      context: .
+      dockerfile: ops/docker/api.Dockerfile
+    environment: *app-environment
+    command: ["npm", "run", "db:migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: ops/docker/api.Dockerfile
+    environment: *app-environment
+    volumes:
+      - artwork-store:/museum/store
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mail:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:9521/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  model:
+    build:
+      context: .
+      dockerfile: ops/docker/serving.Dockerfile
+    environment: *app-environment
+    volumes:
+      - artwork-store:/museum/store
+      - model-state:/museum/run
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build:
+      context: .
+      dockerfile: ops/docker/serving.Dockerfile
+    environment: *app-environment
+    command: ["python", "-m", "workers.main", "--group", "cpu_vision"]
+    volumes:
+      - artwork-store:/museum/store
+      - model-state:/museum/run
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  sweeper:
+    build:
+      context: .
+      dockerfile: ops/docker/api.Dockerfile
+    environment: *app-environment
+    command: ["node", "dist/src/sweeper/main.js"]
+    volumes:
+      - artwork-store:/museum/store
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: ops/docker/web.Dockerfile
+    environment:
+      WEB_PORT: "9501"
+      APP_API_URL: http://api:9521
+      MODEL_API_URL: http://model:9541
+    ports:
+      - "127.0.0.1:${WEB_PORT:-9501}:9501"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  database:
+  artwork-store:
+  model-state:

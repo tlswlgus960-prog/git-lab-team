@@ -1,0 +1,2227 @@
+openapi: 3.1.0
+info:
+  title: 우리 아이 미술관 — 앱 API (app-api)
+  version: 0.1.0
+  contact:
+    name: 1팀 우리 아이 미술관 — 팀 슬랙 채널(문의 때 응답 헤더 X-Request-ID 번호를 함께)
+  description: |
+    보호자 앱·운영·관리 API. Node.js 22 LTS + Express 4 (research R-01, D23).
+    모델 기능 엔드포인트(/v1/models/*)는 model-api.openapi.yaml(Python uvicorn)에 있다.
+    - 오류는 RFC 9457 Problem Details(application/problem+json) + `code` (research R-10).
+    - 보호자 경로는 세션 쿠키 `uam_sid`, 운영 경로는 `uam_ops_sid` (research R-08).
+    - 다른 가족의 자원은 404로 존재를 숨긴다(BR-ACC-01).
+    - 응답 어디에도 모델 점수·확률·객체 키를 싣지 않는다(BR-SUG-02, BR-PRC-04, BR-PRV-01).
+    - 이름·형식은 이 문서로 확정한다(U8 닫음). [추론] 표시는 원천 없음.
+    - 보호자 경로 공통 오류(D21, 경로별로 반복해 적지 않음): 세션 없음·만료는 401 `unauthorized`(reason `login_required`·`session_revoked`, gate G0),
+      가족이 없는 계정(나가거나 해제됨)은 409 `conflict`·reason `no_family`·gate G0 — 화면은 S1d로 간다. 예외: `/v1/me`·`POST /v1/family`·초대 수락은 가족 없이도 된다.
+    - 운영 경로 공통 오류: 세션 없음은 401, 역할 없음은 403 `forbidden_role`·reason `role_missing`·gate G1.
+    - 경로·쿼리 입력 공통 오류(2026-09-30, API 서비스 점검표 계약 2·4·5행, 경로별로 반복해 적지 않음): 숫자 id 자리(경로 `childId`·`artworkId`·`inviteId`·`memberId`·`runId`·`captionId`·`checkId`·`jobId`, 쿼리 `child`)는
+      1~18자리 양의 정수 문자열이다(`^[1-9][0-9]{0,17}$`). 어기면 — 그리고 필수 쿼리가 없거나, `modelId`가 목록 밖이거나, 날짜 쿼리가 `YYYY-MM-DD`가 아니면 —
+      처리 전에 422 `validation_failed`·reason `invalid_param`·`fields: [{name, reason}]`(reason `required`·`not_positive_integer`·`not_in_enum`·`not_date`)로 거절한다.
+      이 검사는 로그인 확인(401)·소유·존재 확인(404)보다 먼저다(형식만 보고 자원 존재는 알리지 않는다) — 형식이 맞는 id만 404로 존재를 숨긴다(BR-ACC-01). DB 오류(503)로 번지지 않는다.
+    - JSON 본문 공통 오류(2026-09-30, 점검표 계약 2~5행, 경로별로 반복해 적지 않음): 본문이 JSON이 아니면 400 `invalid_input`·reason `bad_json`.
+      계약에 없는 칸(칸 이름 오타 포함)·필수 칸 누락·타입·길이·범위·목록 밖 값은 422 `validation_failed`로 거절하고, 어느 칸인지 `fields: [{name, reason}]`로 알린다
+      (모르는 칸은 reason `unrecognized`). 본문 검사 실패가 503으로 번지지 않는다. 예외: 이야기 저장(`PUT …/story`)은 임시 저장(D22)이라 모든 칸이 선택이다.
+    - 오류 안내(2026-09-30, 점검표 W5·E4·E7): 모든 Problem에 `detail`(한국어 한 문장 — 무엇이 틀렸고 부르는 쪽이 무엇을 하면 되는지)을 싣는다.
+      422는 `fields[].message`에 칸마다 올바른 값(형식·길이·범위·허용 값)을 적는다. 4xx는 부르는 쪽이 요청을 고치고, 503은 서버 쪽 문제라 요청을 고치지 않고 다시 시도한다.
+      `detail`·`message`는 API를 부르는 사람을 위한 문장이고, 화면 문구는 아래처럼 `reason`·`gate`로 정한다(문장을 화면에 그대로 쓰지 않는다).
+    - 요청 번호(2026-09-30, 점검표 L1): 모든 응답에 헤더 `X-Request-ID`를 싣는다. 요청에 `X-Request-ID`(1~128자, 영문·숫자·`.`·`_`·`-`)가 오면 그 값을 그대로 쓰고,
+      없거나 형식이 틀리면 서버가 UUID를 만든다. 같은 값이 오류 본문 `requestId`와 서버 로그의 모든 줄에 남는다 — 문의할 때 이 번호를 알려 주면 된다.
+    - 상태코드와 누가 고치나(2026-09-30, 점검표 E7):
+
+      | 코드 | 뜻 | 누가 고치나 |
+      |---|---|---|
+      | 200 · 201 · 202 · 204 | 정상(202는 접수 뒤 처리) | 해당 없음 |
+      | 400 | JSON이 아님(`bad_json`) · 링크 토큰 무효(`token_invalid`) | 부르는 쪽 — 본문·링크를 고친다 |
+      | 401 | 로그인 필요 | 부르는 쪽 — 로그인한다 |
+      | 403 | 권한 없음 | 부르는 쪽 — 권한 있는 계정으로 |
+      | 404 | 대상 없음(다른 가족 자원도 404) | 부르는 쪽 — 주소·id 확인 |
+      | 409 | 지금 상태에서 불가(`reason` 참고) | 부르는 쪽 — 상태를 확인하고 다시 |
+      | 413 | 본문 상한 초과(이미지 20MB) | 부르는 쪽 — 줄여서 |
+      | 422 | 입력 값 오류(`fields[].message`에 올바른 값) | 부르는 쪽 — 값을 고쳐서 |
+      | 429 | 요청 한도 초과 | 부르는 쪽 — 기다렸다가 |
+      | 503 | 서버 쪽 문제(저장·모델·DB) | 우리 팀 — 부르는 쪽은 요청을 고치지 않고 다시 시도 |
+
+      500은 내보내지 않는다 — 예상 못 한 서버 오류도 503 `not_saved`로 감싸고 로그에 `requestId`를 남긴다.
+    - 판단보류(2026-09-30, 점검표 E5): 모델이 그림을 확신하지 못하거나 제안을 만들지 못하면 오류가 아니라 정상 흐름이다 — 작품 응답 `suggestion`이 `none`이 되고
+      보호자가 S3에서 직접 고른다("제안을 준비하지 못했어요 - 직접 골라 주세요", 행선지 = 보호자). 결과 품질이 기준에 못 미치면 결과는 낮춘 경로(액자 등)로 가고
+      보호자가 결과 확인에서 다시 고른다. 점수·확률은 응답에 싣지 않는다(BR-SUG-02). 판단보류 건수는 운영 지표(`/v1/admin/metrics` 제안 수정률)로 본다.
+    - 오류→화면 사상은 `code`가 아니라 `reason`(+`gate`)으로 한다. 해제 주체·다음 행동 문구는 화면 문구 사전(web `copy/ko.ts`)이 gate·reason으로 정한다.
+servers:
+  - url: /
+tags:
+  - name: 보호자 앱
+  - name: 운영
+  - name: 관리
+  - name: 인증
+
+paths:
+  /v1/auth/providers:
+    get:
+      tags: [인증]
+      summary: 쓸 수 있는 로그인 수단 (2026-09-30 카카오 로그인, R-26) — 화면이 버튼 활성·비활성을 정한다
+      security: []
+      responses:
+        '200':
+          description: 로그인 수단
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [kakao, emailSignup]
+                properties:
+                  kakao: { type: boolean, description: 서버에 카카오 앱 키가 설정돼 있는가 }
+                  emailSignup: { type: boolean, description: 새 이메일 가입을 화면에 보일지(메일 발송이 켜져 있을 때만 true — 팀 결정 전) }
+  /v1/auth/kakao/start:
+    get:
+      tags: [인증]
+      summary: 카카오 로그인 시작 (UC13 §0, R-26) — state 쿠키를 두고 카카오 인증 화면으로 302
+      description: 브라우저가 이 주소로 이동한다(fetch 아님). 받는 값은 회원번호뿐 — 동의 항목을 요청하지 않는다. 초대 링크로 왔으면 `invite`에 초대 토큰을 넘긴다(콜백에서 그 가족에 합류).
+      security: []
+      parameters:
+        - { name: invite, in: query, required: false, schema: { type: string, maxLength: 200 } }
+        - { name: next, in: query, required: false, schema: { type: string, maxLength: 500, pattern: '^/app(/[^/].*)?$' }, description: '로그인 뒤 돌아갈 보호자 앱 주소(D47 — 로그인 전에 연 이웃 링크 등). 같은 셸 상대 경로만, 없으면 기본 도착지' }
+      responses:
+        '302': { description: '카카오 인증 화면(https://kauth.kakao.com/oauth/authorize)으로 이동. Set-Cookie uam_kakao_state(10분, HttpOnly, SameSite=Lax)' }
+        '503':
+          description: 카카오 앱 키 미설정 — code not_saved, reason kakao_not_configured(화면은 버튼을 비활성으로 둔다)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/auth/kakao/callback:
+    get:
+      tags: [인증]
+      summary: 카카오 로그인 콜백 (UC13 §0, R-26) — 항상 웹 화면으로 302
+      description: |
+        카카오가 돌려보내는 주소(카카오 디벨로퍼스 Redirect URI와 같아야 한다: APP_BASE_URL + /v1/auth/kakao/callback).
+        state 대조 → 인가 코드를 토큰으로 → 회원번호 → 계정 찾기(없으면 가족 공간 + 만든 보호자, 초대면 그 가족의 공동 보호자) → 세션 쿠키 uam_sid.
+        결과는 이동할 화면으로 알린다 — 처음 `/app/children/new?welcome=1`(캐릭터 만들기, D47) · 다시 옴 `/app`(홈 = 아이 미술관, D47) · 초대 합류 `/app/family?joined=1` ·
+        취소 `/app/login?kakao=cancelled` · 실패 `/app/login?kakao=failed` · 초대 무효 `/app/invite?error=<reason>`. 토큰·코드·회원번호는 저장·로그하지 않는다.
+      security: []
+      parameters:
+        - { name: code, in: query, required: false, schema: { type: string, maxLength: 2000 } }
+        - { name: state, in: query, required: false, schema: { type: string, maxLength: 200 } }
+        - { name: error, in: query, required: false, schema: { type: string, maxLength: 200 }, description: '카카오가 보낸 오류(취소면 access_denied)' }
+        - { name: error_description, in: query, required: false, schema: { type: string, maxLength: 1000 } }
+      responses:
+        '302': { description: 웹 화면으로 이동(위 목록) }
+  /v1/auth/signup:
+    post:
+      tags: [인증]
+      summary: 보호자 이메일 가입 (UC13, FR-31, BR-ACC-06~08, G26, D18)
+      description: |
+        이메일·비밀번호만 받는다. 이메일이 로그인 아이디(별도 아이디 없음). 가족 공간을 함께 만든다.
+        응답은 가입 여부와 관계없이 항상 202 — 이미 가입된 이메일(대소문자 무시)이면 계정을 만들지 않고 그 주소로 안내 메일만 보낸다(결정 ④).
+        이메일별·IP별 요청 한도를 넘으면 메일을 보내지 않고 응답은 그대로 202 [추론 예시값: 같은 이메일 10분 3회, 같은 IP 1시간 20회].
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, passwordConfirm]
+              additionalProperties: false
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, minLength: 8, description: '규칙은 U19. 예시값 8자 이상' }
+                passwordConfirm: { type: string }
+                inviteToken:
+                  type: string
+                  description: '공동 보호자 초대 링크로 가입할 때(UC13 A4) — 새 가족 공간을 만들지 않고 초대한 가족에 공동 보호자로 합류하고, 초대 메일 수신이 주소 확인을 겸해 확인 메일을 보내지 않는다. 이메일은 초대받은 이메일과 같아야 한다(다르면 403 invite_email_mismatch). 토큰이 쓸 수 없으면 400 token_invalid. 이미 가입된 이메일이면 초대를 쓰지 않고 E1과 같이 처리한다'
+      responses:
+        '202': { description: 확인 메일 발송(또는 안내 메일) — 항상 같은 응답 }
+        '400': { $ref: '#/components/responses/TokenInvalid' }
+        '403':
+          description: 초대 링크 가입인데 이메일이 초대받은 이메일과 다름 — code forbidden_role, reason invite_email_mismatch
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '503': { $ref: '#/components/responses/NotSaved' }
+  /v1/auth/email/verify:
+    post:
+      tags: [인증]
+      summary: 가입 확인 메일 링크 처리 (UC13 BF5, G27)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, description: 메일 링크의 1회용 토큰(서버는 해시만 저장) }
+      responses:
+        '204': { description: '이메일 확인 완료. 가입 끝 — 로그인 세션(`uam_sid`)을 함께 발급한다(UC13 BF5)' }
+        '400': { $ref: '#/components/responses/TokenInvalid' }
+  /v1/auth/email/verify/resend:
+    post:
+      tags: [인증]
+      summary: 확인 메일 다시 받기 (UC13, G26·G27) — 이전 토큰 무효
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '202': { description: 항상 같은 응답(가입 여부 비노출) }
+  /v1/auth/login:
+    post:
+      tags: [인증]
+      summary: 보호자 로그인 (INC1) — 이메일이 아이디
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '204': { description: 로그인됨. `uam_sid` 쿠키 발급 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: 비밀번호는 맞았으나 이메일 확인 전 — code `email_unverified`
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/auth/logout:
+    post:
+      tags: [인증]
+      summary: 보호자 로그아웃
+      security: [{ guardianSession: [] }]
+      responses:
+        '204': { description: 로그아웃됨 }
+  /v1/auth/recovery:
+    post:
+      tags: [인증]
+      summary: 로그인 정보 찾기 (UC14, FR-32) — 아이디(이메일)와 재설정 링크를 메일로
+      description: 가입 여부와 관계없이 같은 문구·같은 202. 이메일 확인 전 계정이면 가입 확인 메일을 다시 보낸다 [추론]. 메일에 가족 정보 없음.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '202': { description: '"가입된 이메일이면 메일을 보냈어요"' }
+  /v1/auth/recovery/reset:
+    post:
+      tags: [인증]
+      summary: 비밀번호 재설정 (UC14, G27, 결정 ⑥) — 성공 시 그 계정의 모든 세션 무효
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password, passwordConfirm]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 8 }
+                passwordConfirm: { type: string }
+      responses:
+        '204': { description: 재설정됨. password_changed_at 이전 세션은 현재 세션 포함 모두 무효 }
+        '400': { $ref: '#/components/responses/TokenInvalid' }
+        '422': { description: '새 비밀번호 규칙 위반·확인 불일치 — 토큰은 아직 쓴 것으로 보지 않는다(UC14 E3)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+        '503': { $ref: '#/components/responses/NotSaved' }
+  /v1/auth/password:
+    post:
+      tags: [인증]
+      summary: 로그인한 보호자의 비밀번호 변경 (UC14 A5, D24)
+      description: 현재 비밀번호를 확인하고 새 비밀번호(재설정과 같은 규칙)로 바꾼다. password_changed_at 갱신으로 다른 기기의 세션은 모두 무효가 되고, 지금 기기에는 새 세션 쿠키를 준다(로그인 유지). 현재 비밀번호가 틀리면 바꾸지 않고 로그인 실패와 같은 요청 한도를 센다.
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, password, passwordConfirm]
+              properties:
+                currentPassword: { type: string }
+                password: { type: string, minLength: 8 }
+                passwordConfirm: { type: string }
+      responses:
+        '204': { description: '바뀜. 다른 기기 세션 무효, 이 기기는 새 `uam_sid` 쿠키' }
+        '409':
+          description: 카카오 계정은 비밀번호가 없다 — code conflict, reason no_password (D36)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { description: '새 비밀번호 규칙 위반·확인 불일치(invalid_fields) 또는 현재 비밀번호 틀림(reason current_password_mismatch)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+        '429': { description: '현재 비밀번호를 여러 번 틀림(로그인 실패와 같은 한도, reason login_attempts)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+        '503': { $ref: '#/components/responses/NotSaved' }
+  /v1/ops/auth/login:
+    post:
+      tags: [인증]
+      security: []
+      summary: 팀원 로그인 (INC2) — 역할은 계정에 고정
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: 로그인됨. `uam_ops_sid` 쿠키 발급
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [roles]
+                properties:
+                  roles:
+                    type: array
+                    description: 'SD_03 team_member_role — 한 팀원이 여러 역할을 가질 수 있다(BR-ACC-05)'
+                    items: { $ref: '#/components/schemas/StaffRole' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/ops/auth/logout:
+    post:
+      tags: [인증]
+      summary: 팀원 로그아웃 — 현재 운영 세션 삭제 (INC2, D21)
+      security: [{ staffSession: [] }]
+      responses:
+        '204': { description: 로그아웃됨. `uam_ops_sid` 쿠키 삭제. 세션이 없어도 204 }
+  /v1/ops/me:
+    get:
+      tags: [인증]
+      summary: 로그인한 팀원 상태 — 역할·가린 계정 (C9 운영 셸, 새로고침 뒤 복원, D21)
+      description: 역할 목록으로 SD_02 §2-1 역할별 메뉴 표의 메뉴만 그린다.
+      security: [{ staffSession: [operator, evaluator, integrator] }]
+      x-permission: staff.me   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      responses:
+        '200':
+          description: 팀원 상태
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [roles, emailMasked]
+                properties:
+                  emailMasked: { type: string }
+                  roles:
+                    type: array
+                    items: { $ref: '#/components/schemas/StaffRole' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/me:
+    get:
+      tags: [인증]
+      summary: 로그인한 보호자 상태 — 가족 소속·역할 (UC15, U20) [추론]
+      description: 화면이 가족 없음 상태(나가거나 해제된 계정)를 알아 "초대 기다리기 / 새 가족 공간 만들기"를 보이는 데 쓴다. 가족 ID는 응답하지 않는다.
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 보호자 상태
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [hasFamily, loginMethod]
+                properties:
+                  emailMasked: { type: [string, 'null'], description: '카카오 계정은 null(이메일을 받지 않는다, R-26)' }
+                  loginMethod: { type: string, enum: [kakao, email], description: '2026-09-30 카카오 로그인(R-26)' }
+                  hasFamily: { type: boolean }
+                  role: { type: [string, 'null'], enum: [owner, co, null] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/family:
+    post:
+      tags: [보호자 앱]
+      summary: 새 가족 공간 만들기 — 가족 없는 계정만 (U20 P0 기본값) [추론]
+      description: 나가거나 해제돼 family_id가 NULL인 계정이 새 가족 공간을 만들고 만든 보호자(role='owner')가 된다. 이미 가족이 있으면 409.
+      security: [{ guardianSession: [] }]
+      responses:
+        '201': { description: 가족 공간 생성 }
+        '409':
+          description: 이미 가족에 소속 — code conflict, reason already_in_family
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/family/invites:
+    get:
+      tags: [보호자 앱]
+      summary: 대기 중인 공동 보호자 초대 목록 (UC15, BR-ACC-09) — 초대 번호·마스킹한 이메일·만료 시각
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 대기 중 초대
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    emailMasked: { type: [string, 'null'], description: '링크 초대는 null' }
+                    expiresAt: { type: string, format: date-time }
+    post:
+      tags: [보호자 앱]
+      summary: 공동 보호자 초대 — 기본은 초대 링크 만들기(UC15 §0, 2026-09-30), 이메일을 주면 기존 초대 메일(메일이 꺼져 있으면 발송 안 함) — 만든 보호자만
+      description: |
+        **2026-09-30 초대 링크(UC15 §0, R-26)**: 본문을 비우면(`{}`) 이메일 없는 초대를 만들고 201로 한 번 쓰는 링크를 돌려준다 — 화면이 복사해 카카오톡으로 보낸다. 링크 원문은 이 응답에만 있고 DB에는 해시만.
+        보호자는 부모 두 명까지(만든 보호자 1 + 공동 보호자 1, 1c460b0 사용자 결정). 초대는 만든 보호자만 — 공동 보호자는 403.
+        공동 보호자가 이미 있으면 409 `co_guardian_full`("보호자는 두 명까지예요"). 대기 초대는 가족당 1건 — 새로 초대하면 이전 초대는 무효 [추론].
+        초대 유효 7일 [예시값]. 요청 한도 초과 시 메일을 보내지 않고 응답은 그대로 202 [추론]. 초대받은 이메일의 가입 여부는 드러내지 않는다.
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email, description: '주면 기존 이메일 초대(메일 발송 설정이 켜져 있을 때만 나간다). 없으면 링크 초대' }
+            example: {}
+      responses:
+        '201':
+          description: 초대 링크를 만듦(이메일 없는 초대)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, link, expiresAt]
+                properties:
+                  id: { type: string }
+                  link: { type: string, description: '한 번 쓰는 초대 링크(APP_BASE_URL/app/invite?token=…). 이 응답에서만 보인다' }
+                  expiresAt: { type: string, format: date-time }
+        '202': { description: 초대 메일 발송(가입 여부 비노출) — 이메일을 준 경우 }
+        '403':
+          description: 공동 보호자는 초대할 수 없음 — code forbidden_role, reason invite_owner_only (G29)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: 보호자 두 명이 이미 참 — code conflict, reason co_guardian_full (G29, UC15 E9)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+  /v1/family/invites/{inviteId}:
+    delete:
+      tags: [보호자 앱]
+      summary: 초대 취소 (UC15)
+      security: [{ guardianSession: [] }]
+      parameters:
+        - { name: inviteId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      responses:
+        '204': { description: 취소됨 }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/family/invites/lookup:
+    get:
+      tags: [보호자 앱]
+      summary: 초대 링크의 초대 이메일 — 가입 화면(S0) 미리 채움용 (UC15 A4·UC13 A4, SD_02 S1c)
+      description: |
+        초대 메일 링크의 토큰으로 초대받은 이메일을 돌려준다. 토큰을 쓰지 않는다(수락은 가입·수락 요청에서). 로그인 없이 부른다.
+        토큰은 초대받은 이메일로만 보낸 1회용 비밀값이라, 토큰을 가진 사람에게 그 이메일을 보여도 새로 드러나는 정보가 없다.
+        만료·사용·취소를 구분하지 않고 400 `token_invalid`(G28, BR-ACC-08). 가족 정보·초대한 사람은 싣지 않는다.
+      security: []
+      parameters:
+        - { name: token, in: query, required: true, schema: { type: string, maxLength: 200 } }
+      responses:
+        '200':
+          description: 초대 이메일(원문)
+          content:
+            application/json:
+              schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
+        '400': { $ref: '#/components/responses/TokenInvalid' }
+  /v1/family/invites/accept:
+    post:
+      tags: [보호자 앱]
+      summary: 초대 수락 (UC15, G28) — 토큰 유효·이메일 일치·다른 가족 미소속
+      description: 로그인한 계정의 이메일이 초대 이메일과 같아야 한다. 초대 링크로 새로 가입한 계정은 새 가족 공간 없이 합류(UC13 A4).
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '204': { description: 공동 보호자로 합류 }
+        '400': { $ref: '#/components/responses/TokenInvalid' }
+        '403':
+          description: 로그인한 계정의 이메일이 초대받은 이메일과 다름 — code forbidden_role, reason invite_email_mismatch (G28, UC15 E2, SD_02 S1c). 초대받은 이메일로 로그인하라는 안내용. 링크 초대(이메일 없음)는 대조하지 않는다(2026-09-30)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: 이미 다른 가족에 소속 — code conflict, reason already_in_family
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/family/members:
+    get:
+      tags: [보호자 앱]
+      summary: 가족 보호자 목록 (UC15) — 역할(owner/co)과 마스킹한 이메일
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 보호자 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    role: { type: string, enum: [owner, co] }
+                    emailMasked: { type: [string, 'null'], description: '카카오 계정은 null(D36)' }
+                    isMe: { type: boolean }
+  /v1/family/members/{memberId}:
+    delete:
+      tags: [보호자 앱]
+      summary: 공동 보호자 해제 (UC15, G29) — 만든 보호자만. 해제된 계정의 세션은 즉시 모두 삭제
+      security: [{ guardianSession: [] }]
+      parameters:
+        - { name: memberId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      responses:
+        '204': { description: 해제됨. 그 보호자가 올린 자료는 가족 공간에 남음 }
+        '403':
+          description: 만든 보호자가 아님 — code forbidden_role, reason not_family_owner
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/family/leave:
+    post:
+      tags: [보호자 앱]
+      summary: 가족 공간에서 나가기 (UC15, G29) — 공동 보호자만. 그 계정의 세션은 즉시 모두 삭제
+      security: [{ guardianSession: [] }]
+      responses:
+        '204': { description: 나감. 올린 자료는 가족 공간에 남음 }
+        '409':
+          description: 만든 보호자는 나갈 수 없음 — code conflict, reason family_owner_cannot_leave (U20)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/town:
+    get:
+      tags: [보호자 앱]
+      summary: 미술관 마을 (D40, SD_02 §17-13 D) — 내 건물 · 이웃 건물(문 열림, 아이 캐릭터·별칭) · 모르는 가족 건물(겉모양만, 문 잠김)
+      description: |
+        가족(계정)마다 건물 1채. 건물 자리(x, y)는 가족 번호로 정해진 격자. 모르는 가족은 최대 12채, 이름·아이 정보 없이 모양만(BR-ACC-01 — 존재 외에는 드러내지 않는다).
+        건물 id는 가족 번호가 아니라 서명한 불투명 값이다.
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 마을
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [buildings]
+                properties:
+                  buildings:
+                    type: array
+                    items: { $ref: '#/components/schemas/TownBuilding' }
+  /v1/neighbors:
+    get:
+      tags: [보호자 앱]
+      summary: 이웃 가족 목록 (D40, UC_16) — 건물 id · 아이 캐릭터·별칭
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 이웃
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TownBuilding' }
+  /v1/neighbors/{buildingId}:
+    delete:
+      tags: [보호자 앱]
+      summary: 이웃 끊기 (D40, UC_16 A2) — 어느 쪽이든 바로, 끊으면 서로의 미술관 문이 즉시 잠김
+      security: [{ guardianSession: [] }]
+      parameters:
+        - { name: buildingId, in: path, required: true, schema: { type: string, pattern: '^b_[A-Za-z0-9_-]{16}$' } }
+      responses:
+        '204': { description: 끊음 }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/neighbors/invites:
+    get:
+      tags: [보호자 앱]
+      summary: 대기 중인 이웃 초대 링크 (D40)
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 대기 중(가족당 1건)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, expiresAt]
+                  properties:
+                    id: { type: string }
+                    expiresAt: { type: string, format: date-time }
+    post:
+      tags: [보호자 앱]
+      summary: 이웃 초대 링크 만들기 (D40, UC_16 BF1) — 한 번 · 7일 · 가족당 대기 1건(새로 만들면 이전 링크 무효), 링크 원문은 이 응답에서만
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, properties: {} }
+            example: {}
+      responses:
+        '201':
+          description: 링크
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, link, expiresAt]
+                properties:
+                  id: { type: string }
+                  link: { type: string, description: 'APP_BASE_URL/app/neighbor?token=…' }
+                  expiresAt: { type: string, format: date-time }
+        '409':
+          description: 이웃이 이미 30가족 — code conflict, reason neighbor_full
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/neighbors/invites/{inviteId}:
+    delete:
+      tags: [보호자 앱]
+      summary: 대기 중인 이웃 초대 취소 (D40)
+      security: [{ guardianSession: [] }]
+      parameters:
+        - { name: inviteId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      responses:
+        '204': { description: 취소 }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/neighbors/accept:
+    post:
+      tags: [보호자 앱]
+      summary: 이웃 초대 받기 (D40, UC_16 BF3) — 두 가족이 서로 이웃
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              additionalProperties: false
+              properties:
+                token: { type: string, minLength: 10, maxLength: 200 }
+      responses:
+        '204': { description: 이웃이 됨(이미 이웃이어도 204) }
+        '400': { $ref: '#/components/responses/TokenInvalid' }
+        '409':
+          description: 자기 가족의 링크 — reason own_family · 이웃 30가족 — reason neighbor_full
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/visit/children/{childId}/gallery:
+    get:
+      tags: [보호자 앱]
+      summary: 이웃 아이의 미술관 보기 (D40, UC_16 BF4, SD_02 §17-13 F) — 그림 · 별칭 · 제목 · 캐릭터만
+      description: 이웃이 아니면 404(존재를 숨김). 나이 · 한마디 · 감상평 · 그린 날 · 원본은 싣지 않는다. 방은 번호로만("전시실 1"). 파일은 방문 전용 경로(/v1/visit/files)로만.
+      security: [{ guardianSession: [] }]
+      parameters:
+        - { name: childId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      responses:
+        '200':
+          description: 방문 미술관
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VisitGallery' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/visit/files/{token}:
+    get:
+      tags: [보호자 앱]
+      summary: 방문 전용 그림 파일 (D40) — 받을 때마다 이웃 관계를 다시 확인, 끊으면 바로 404
+      security: [{ guardianSession: [] }]
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string, maxLength: 300 } }
+      responses:
+        '200': { description: 그림 파일 }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/children:
+    get:
+      tags: [보호자 앱]
+      summary: 아이 목록 (UC1, S1)
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 가족의 아이 별칭 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Child' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [보호자 앱]
+      summary: 아이 등록 — 별칭만 (UC1, FR-1, BR-CHD-01·02 v2.2, G4) — 별칭 중복 검사 없음(D18)
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example: {"alias": "하늘"}   # = ops/checklist/examples(점검표 E3, 시험 contract-docs가 대조)
+            schema: { $ref: '#/components/schemas/ChildInput' }
+      responses:
+        '201':
+          description: 등록됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Child' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '503': { $ref: '#/components/responses/NotSaved' }
+  /v1/children/{childId}:
+    parameters:
+      - $ref: '#/components/parameters/ChildId'
+    patch:
+      tags: [보호자 앱]
+      summary: 별칭 수정 (D13)
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChildInput' }
+      responses:
+        '200':
+          description: 수정됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Child' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+    delete:
+      tags: [보호자 앱]
+      summary: 아이 삭제 — 그 아이의 모든 작품 포함 (UC7, FR-10, BR-DEL-01, G18)
+      security: [{ guardianSession: [] }]
+      responses:
+        '202': { description: 삭제 접수. 목록·전시에서 즉시 사라짐 }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/NotSaved' }
+  /v1/children/{childId}/deletion:
+    parameters:
+      - $ref: '#/components/parameters/ChildId'
+    get:
+      tags: [보호자 앱]
+      summary: 아이 삭제 진행 (S9, UC7, D21) — 폴링용
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 진행 상태. 없는 번호·다른 가족 번호·끝난 삭제는 모두 `done`(존재 비노출)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionProgress' }
+
+  /v1/artworks:
+    get:
+      tags: [보호자 앱]
+      summary: 작품 목록과 상태 (UC3, S4, D13) — `삭제 중` 제외
+      security: [{ guardianSession: [] }]
+      parameters:
+        - name: child
+          in: query
+          schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' }
+      responses:
+        '200':
+          description: 작품 요약 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ArtworkSummary' }
+    post:
+      tags: [보호자 앱]
+      summary: 작품 사진 내구 접수 (UC2, FR-2, BR-INT-01~04, G5·G6)
+      description: |
+        원본·작품 기록·작업 기록이 모두 저장된 뒤에만 202. 같은 Idempotency-Key 재전송은 기존 작품을 202로 돌려준다.
+        형식 JPEG·PNG·HEIC(매직 바이트 판별), 20MB 이하.
+      security: [{ guardianSession: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 클라이언트가 만든 UUID → artwork.request_no (uq_artwork_request, BR-INT-03)
+          schema: { type: string, format: uuid, maxLength: 64 }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [childId, photo]
+              properties:
+                childId: { type: string }
+                photo: { type: string, format: binary }
+                making: { type: string, enum: ['true', 'false', '1', '0'], description: '(D46) 만들기(입체 작품)면 true — 올릴 때만 고른다, 기본 그림. 미술관 받침대(D45)' }
+                title: { type: string, maxLength: 100, description: '(D46) 제목 — 올린 뒤 고칠 수 없다. 비우면 "제목 없는 그림 N"' }
+                madeOn: { type: string, format: date, description: '(D46) 그린 날 — 비우면 capturedOn, 없으면 올린 날. 미래는 422 made_on_in_future' }
+                ageAtMaking: { type: string, pattern: '^(1[0-8]|[0-9])$', description: '(D46) 그때 나이 0~18 — 비우면 그 아이의 최근 기록' }
+                childWords: { type: string, maxLength: 2000, description: '(D46) 아이의 한마디 — 입력 그대로' }
+                guardianNote: { type: string, maxLength: 1000, description: '(D46) 보호자 감상평 — 올린 뒤의 느낌은 댓글로' }
+                capturedOn:
+                  type: string
+                  format: date
+                  description: '(D34) 사진 촬영일 — 브라우저가 EXIF DateTimeOriginal에서 날짜만 읽어 보낸다(위치·기기 정보는 보내지 않음). 그린 날로 쓴다. 없으면 올린 날, 미래면 오늘. 형식이 틀리면 422 captured_on'
+                retakeOf:
+                  type: string
+                  description: 다시 찍기(EXT2)로 올릴 때 이전 작품 ID. 아이 미리 선택용 참고값
+      responses:
+        '202':
+          description: '접수 완료. D34 — 같은 트랜잭션에서 원본 액자로 **바로 전시**된다(`exhibited: true`, `state: exhibited`, `hungResultKind: frame`). 이야기는 자동으로 채운다(제목 "제목 없는 그림 N"·그린 날·최근 나이). 판정(권유용)은 그대로 돈다'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArtworkDetail' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '503': { $ref: '#/components/responses/NotSaved' }
+
+  /v1/artworks/{artworkId}:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+    get:
+      tags: [보호자 앱]
+      summary: 작품 상세 — 상태·제안 문구 코드·단계별 진행·낮춤 표시 (UC2·3·4, S3·S4·S5)
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 작품 상세
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArtworkDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [보호자 앱]
+      summary: 작품 삭제 (UC7, FR-10, G18·G19)
+      security: [{ guardianSession: [] }]
+      responses:
+        '202': { description: 삭제 접수(`deleting`). 진행 중 단계 작업 취소 요청됨 }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/NotSaved' }
+  /v1/artworks/{artworkId}/deletion:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+    get:
+      tags: [보호자 앱]
+      summary: 작품 삭제 진행 (S9, UC7, G19, D21) — 폴링용
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 진행 상태. 없는 번호·다른 가족 번호·끝난 삭제(삭제 미완료 포함)는 모두 `done`(존재 비노출, 미완료는 S10에만 집계)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionProgress' }
+
+  /v1/artworks/{artworkId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+    post:
+      tags: [보호자 앱]
+      summary: 전시 방식 확정 (UC2, FR-3, BR-INT-05, BR-SUG-03·05, G8·G17)
+      description: |
+        `received`·`judging`·`awaiting_confirm`에서만 받는다. 같은 값 재요청은 현재 상태를 200으로 돌려준다(첫 값 유지).
+        `sculpture`는 `sculpture.exposed=true`일 때만(D10). `frame`은 모델을 부르지 않고 즉시 결과를 만든다(BR-PRC-01).
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind: { $ref: '#/components/schemas/ConfirmKind' }
+      responses:
+        '200':
+          description: 확정됨(또는 이미 같은 값으로 확정됨)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArtworkDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/artworks/{artworkId}/decision:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+    post:
+      tags: [보호자 앱]
+      summary: 결과 확인 결정 (UC4, FR-6, BR-APR-02·04·06, D2·D11, G10)
+      description: |
+        회차당 1회(uq). 중복 요청은 첫 결정을 200으로 돌려준다.
+        `failed`(처리하지 못함)에서는 `frame`(원본 읽기 가능 시)·`retake`만(트리거 trg_decision_bi, G9). 회차는 최대 2(2회차에 use_lower 없음).
+        `use_lower`는 보여 준 결과보다 낮은 결과가 체인에 있을 때만(2.5D가 없으면 생성 후 다시 `awaiting_review`).
+        `retake`는 이 작품을 `deleting`으로 두고, 응답의 `retake.childId`로 새 접수를 시작한다(EXT2).
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example: {"decision": "like"}   # = ops/checklist/examples(점검표 E3, 시험 contract-docs가 대조)
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { $ref: '#/components/schemas/Decision' }
+      responses:
+        '200':
+          description: 결정 반영(또는 이미 반영된 결정)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [artwork, alreadyDecided]
+                properties:
+                  artwork:
+                    description: '결정 뒤 작품. `retake`면 작품이 `deleting`이 되어 보호자에게 보이지 않으므로 null(EXT2) — 화면은 `retake.childId`로 새 접수'
+                    oneOf:
+                      - { $ref: '#/components/schemas/ArtworkDetail' }
+                      - { type: 'null' }
+                  alreadyDecided: { type: boolean }
+                  retake:
+                    type: object
+                    properties:
+                      childId: { type: string }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/artworks/{artworkId}/story:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+    put:
+      tags: [보호자 앱]
+      summary: 이야기 기록 (UC5, FR-7, BR-STY-01~03, G11·G12)
+      description: |
+        **D46: 한 번 올라간 작품은 고치지 않는다 — 이 요청은 늘 409 `artwork_locked`**(바꾸려면 지우고 다시 올린다). 아래는 D46 전의 설명.
+        부분 저장 허용. 승인됨 + 필수 3항목이 채워지면 `exhibited`로 전환. 보호자 감상평(`guardianNote`, D25)은 선택이고 전시 조건이 아니다.
+        `exhibited` 작품의 필수 항목을 비우는 요청은 422. `childWords`는 받은 그대로 저장한다(트림·교정 없음).
+        공동 보호자 동시 수정: `baseUpdatedAt`이 저장된 `updatedAt`과 다르면 저장하지 않고 409 `story_conflict`("다른 보호자가 먼저 고쳤어요") — 화면은 최신 이야기를 다시 불러온다.
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example: {"title": "우리 가족", "madeOn": "2026-09-20", "ageAtMaking": 5, "childWords": "엄마랑 바다 갔어"}   # = ops/checklist/examples(점검표 E3, 시험 contract-docs가 대조)
+            schema: { $ref: '#/components/schemas/StoryInput' }
+      responses:
+        '200':
+          description: 저장됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArtworkDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/artworks/{artworkId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+    get:
+      tags: [보호자 앱]
+      summary: 부모 댓글 목록 (D46 ④)
+      description: 가족 보호자(공동 보호자 포함)만. 가족 밖(이웃 방문)에는 없다. 오래된 것부터. **기한**(이제민 결정) — 걸린 날부터 7일 동안만 쓰고 지운다(`open`), 그 뒤로는 보기만.
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 댓글과 기한
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, open, openUntil, days]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ArtworkComment' } }
+                  open: { type: boolean, description: '지금 쓰고 지울 수 있음' }
+                  openUntil: { type: string, format: date-time, description: '걸린 때(없으면 올린 때) + 7일' }
+                  days: { type: integer, description: '기한 일수(7)' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [보호자 앱]
+      summary: 부모 댓글 남기기 (D46 ④)
+      description: 500자, 입력 그대로(트림 · 교정 없음). 빈칸은 422 comment_blank. 기한(7일)이 지나면 409 comments_closed.
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [body], additionalProperties: false, properties: { body: { type: string, maxLength: 500 } } }
+      responses:
+        '201':
+          description: 남김
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArtworkComment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+  /v1/artworks/{artworkId}/comments/{commentId}:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+      - { name: commentId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+    delete:
+      tags: [보호자 앱]
+      summary: 내 댓글 지우기 (D46 ④)
+      description: 자기 댓글만. 남의 댓글은 403 forbidden_role(not_your_comment). 기한(7일)이 지나면 409 comments_closed.
+      security: [{ guardianSession: [] }]
+      responses:
+        '204': { description: 지움 }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/artworks/{artworkId}/captions:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+    post:
+      tags: [보호자 앱]
+      summary: (P0.5) 설명 초안 생성·재생성 (UC10, FR-27, BR-CAP-01~07, G13~G16)
+      description: |
+        P0에서는 `caption.enabled=false`라 404. 승인본이 있으면 409 `caption_locked` "승인한 설명은 바뀌지 않아요"(E3).
+        LLM 소진 시 503 `llm_unavailable` + 선택지(template / later / direct)(D1, G15).
+        그 밖의 거절: 키워드·고른 태그 모두 없음 422 `keywords_required`(G14, E6) · 고른 태그가 그 작품의 M2 후보가 아님 422 `tag_not_candidate`(BR-CAP-06) ·
+        M6 활성 버전 없음(라이선스 미확인 포함) 409 `model_disabled`(G13, E4 — 템플릿·직접 입력만) · 삭제 중 409 `deleting`(E7).
+        `fallback`: `template` = LLM을 부르지 않고 app-api가 템플릿 문장을 만든다(인프라 소진 뒤 보호자 선택이라 설명 낮춤률에 넣지 않음, E1) ·
+        `direct` = `body`의 보호자 문장을 출처 direct로 저장(A3, "AI 작성" 표시 없음). 새 초안은 이전 미승인 초안을 폐기로 바꾼다(A1).
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CaptionRequest' }
+      responses:
+        '201':
+          description: 규칙 검사를 통과한 초안(또는 템플릿)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Caption' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '503': { $ref: '#/components/responses/NotSaved' }
+  /v1/artworks/{artworkId}/captions/{captionId}:
+    parameters:
+      - $ref: '#/components/parameters/ArtworkId'
+      - name: captionId
+        in: path
+        required: true
+        schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' }
+    put:
+      tags: [보호자 앱]
+      summary: (P0.5) 설명 수정·승인·폐기 (UC10, BR-CAP-04, D6)
+      security: [{ guardianSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [edit, approve, discard] }
+                body: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: 반영됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Caption' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/captions/model-status:
+    get:
+      tags: [보호자 앱]
+      summary: (P0.5) 설명 모델 대기 요약 — S7 안내 문구용 (SD_02 e6c464c, A 모델적재 §3.1)
+      description: |
+        llm-server `/v1/ready`의 `model.state`·`maxObservedLoadSeconds`·`queue.waiting`을 요약만 한다. 모델 이름·버전·원래 상태값은 싣지 않는다(BR-SUG-02, D3).
+        `warming` = state가 cold 또는 loading(짐작 포함) → "처음 만들 때는 조금 더 걸릴 수 있어요(최대 약 N초)".
+        `busy` = queue.waiting > 0 → "다른 설명을 먼저 만들고 있어요". P0(`CAPTION_ENABLED=false`)에서는 404.
+      security: [{ guardianSession: [] }]
+      responses:
+        '200':
+          description: 대기 요약
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [warming, busy]
+                properties:
+                  warming: { type: boolean }
+                  maxWaitSeconds: { type: [number, 'null'], description: 'maxObservedLoadSeconds(없으면 null — "최대 약 N초"를 빼고 보인다)' }
+                  busy: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/gallery:
+    get:
+      tags: [보호자 앱]
+      summary: 가족 전시 (UC6, FR-8, BR-EXH-01~07)
+      description: |
+        `exhibited`만. 아이별 → 연령 묶음 → 제작일 순. 낮춤·원인 표시 없음(D3). 모델 호출 없음.
+        `sculpture.exposed=false`면 3D 결과는 원본 액자로 내려준다(D10).
+      security: [{ guardianSession: [] }]
+      parameters:
+        - name: child
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' }
+        - name: q
+          in: query
+          description: 제목 부분 일치 검색 [추론]
+          schema: { type: string, maxLength: 100 }
+        - name: madeOn
+          in: query
+          description: 제작일 검색 [추론]
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: 연령 묶음 목록
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Gallery' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/files/{token}:
+    get:
+      tags: [보호자 앱]
+      summary: 가족 파일 내려받기 — 짧게 유효한 서명 토큰 (research R-06)
+      description: 토큰은 작품 상세·전시 응답에만 실리고 5분 뒤 만료 [추론]. 가족 세션과 토큰의 가족이 같아야 한다. nginx X-Accel-Redirect로 전달.
+      security: [{ guardianSession: [] }]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: 파일 본문 }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /openapi.json:
+    get:
+      tags: [운영]
+      security: []
+      summary: 이 명세(app-api) JSON — S12 엔드포인트 탭과 web 타입 생성의 원천 (R-11, 비밀 아님)
+      responses:
+        '200':
+          description: OpenAPI 문서
+          content:
+            application/json:
+              schema: { type: object }
+  /live:
+    get:
+      tags: [운영]
+      security: []
+      summary: 생존 — API 프로세스 응답만 (FR-12, BR-OPS-01)
+      responses:
+        '200':
+          description: 살아 있음
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [live] }
+  /ready:
+    get:
+      tags: [운영]
+      security: []
+      summary: 준비 — 저장소·DB·큐 + 모델별 준비 (FR-12, BR-OPS-01)
+      description: 인증 없이 호출하면 상위 `status`만, 팀원 세션이면 모델별 상세를 준다 [추론].
+      responses:
+        '200':
+          description: 준비됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Readiness' }
+        '503':
+          description: 준비 안 됨(저장소·DB·큐 중 하나라도 불가)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Readiness' }
+  /metrics:
+    get:
+      tags: [운영]
+      security: []
+      summary: Prometheus 지표 (FR-26) — 라벨은 model_id·model_version·serving_group·cause·error_class만
+      description: 내부망(nginx allow 목록)에서만 노출.
+      responses:
+        '200':
+          description: text/plain; version=0.0.4
+          content:
+            text/plain:
+              schema: { type: string }
+
+  /v1/admin/metrics:
+    get:
+      tags: [운영]
+      summary: 서비스·모델별 지표 (UC8, S10, FR-13·26, BR-OPS-02~04) — 세 역할 읽기(D21, UC9 A1·UC11 A5)
+      security: [{ staffSession: [operator, evaluator, integrator] }]
+      x-permission: metrics.read   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date-time }, description: '없으면 전체 기간(SD_03 v_metrics_* 뷰). 서비스 지표는 artwork_outcome.confirmed_at·first_decided_at, 모델 지표는 stage_job.finished_at 기준(SD_03 §19 #18)' }
+        - { name: to, in: query, required: false, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: 지표. 분모 0이면 값 null("해당 없음")
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Metrics' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+  /v1/admin/unreached:
+    get:
+      tags: [운영]
+      summary: 결과 미도달 개별 목록 (FR-13, SD_01 7.7) — 단계 작업 번호·모델·오류 분류만
+      security: [{ staffSession: [operator] }]
+      x-permission: unreached.read   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      responses:
+        '200':
+          description: 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/UnreachedItem' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+
+  /v1/ops/models:
+    get:
+      tags: [운영]
+      summary: 모델 적재 상태 (S11 "모델 상태" 표, A `A_모델적재_화면요구` §4) — model-api `/internal/models` 프록시
+      security: [{ staffSession: [operator, evaluator, integrator] }]
+      x-permission: models.read   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      responses:
+        '200':
+          description: 모델별 활성 버전·장치·적재 상태(가족 데이터 없음)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items: { $ref: 'model-api.openapi.yaml#/components/schemas/ModelLoadStatus' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+  /v1/ops/models/{modelId}/warmup:
+    post:
+      tags: [운영]
+      summary: 지금 불러오기 (S11) — model-api `/internal/models/{id}/warmup` 프록시. gate_event 없음(운영 동작)
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.warmup   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, enum: [M1, M2, M3, M5, M6, M7] } }
+      responses:
+        '202':
+          description: 적재 요청됨
+          content:
+            application/json:
+              schema: { $ref: 'model-api.openapi.yaml#/components/schemas/ModelLoadStatus' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+        '409':
+          description: M6는 기동 때 1회만 미리 올림 — code conflict, reason m6_preload_at_start_only
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/ops/models/{modelId}/check:
+    post:
+      tags: [운영]
+      summary: 모델 점검 요청 (D20, FR-33, UC8 A8·UC9 A7, G30) — 평가 묶음 항목 한 장으로 샘플 추론
+      description: |
+        모델 하나를 평가 묶음 항목 한 장으로 돌려 동작(오류 없음·출력 형식·처리 시간)만 확인한다. 품질 점수 없음, 재시도 없음(BR-OPS-06).
+        `versionId`가 없으면 활성 버전, 없으면 가장 최근의 폐기 아닌 버전. 라이선스 확인 전·후보 버전도 점검한다(활성화가 아님).
+        `evalItemId`가 없으면 서버가 고른다(M3는 사람 항목 우선, M7은 입체 항목, 그 밖은 사진 항목).
+        점검 작업은 `stage_job` `origin='check'`·우선순위 30으로 들어가고 지표·결과 미도달에 넣지 않는다(BR-OPS-05). gate_event는 G30 거절만.
+        serving 점검 실행기가 배포되기 전(app-api `MODEL_CHECK_ENABLED` 꺼짐)에는 503 `not_saved`/`check_runner_missing`.
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.check   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, enum: [M1, M2, M3, M4, M5, M6, M7] } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                versionId: { type: string, pattern: '^[0-9]+$' }
+                evalItemId: { type: string, pattern: '^[0-9]+$' }
+      responses:
+        '202':
+          description: 점검 접수(status queued). 결과는 /v1/ops/model-checks/{checkId}
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelCheck' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+        '404': { description: '없는 버전(그 모델의 것이 아님 포함)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+        '409':
+          description: |
+            conflict — reason `check_in_progress`(같은 모델 점검 진행 중) · `rule_not_checked`(M4) · `m6_check_p05`(M6, P0.5 전) ·
+            `no_version`(버전 없음) · `version_retired`(G30) · `no_check_sample`(맞는 평가 묶음 항목 없음, G30)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: validation_failed — reason `not_check_sample`(평가 묶음 항목이 아니거나 모델에 맞지 않는 종류, G30)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: not_saved — reason `check_runner_missing`(serving 점검 실행기 배포 전)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /v1/ops/model-checks:
+    get:
+      tags: [운영]
+      summary: 모델별 최근 점검 (D20, S11 "마지막 점검" 열) — 모델마다 가장 최근 1건
+      security: [{ staffSession: [operator, evaluator, integrator] }]
+      x-permission: models.check.read   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      responses:
+        '200':
+          description: 점검한 적이 있는 모델만
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [checks]
+                properties:
+                  checks:
+                    type: array
+                    items: { $ref: '#/components/schemas/ModelCheck' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+  /v1/ops/model-checks/{checkId}:
+    get:
+      tags: [운영]
+      summary: 점검 상태·결과 (D20, 폴링 3→6→10초). 15분 넘게 시작 못 한 점검은 이 조회에서 failed·model_not_ready로 닫힌다
+      security: [{ staffSession: [operator, evaluator, integrator] }]
+      x-permission: models.check.read   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      parameters:
+        - { name: checkId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      responses:
+        '200':
+          description: 점검 기록
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelCheck' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+        '404': { description: 없음(보관 20건 밖으로 지워진 점검 포함), content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+  /v1/admin/models:
+    get:
+      tags: [관리]
+      summary: 매니페스트 조회 M1~M7 (UC9, S11, FR-24)
+      security: [{ staffSession: [evaluator, operator, integrator] }]
+      x-permission: models.read   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      responses:
+        '200':
+          description: 모델과 버전
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ModelManifest' }
+  /v1/admin/models/{modelId}/versions:
+    parameters:
+      - $ref: '#/components/parameters/ModelId'
+    post:
+      tags: [관리]
+      summary: 후보 버전 등록 — models/manifest.yaml의 항목을 DB로 (research R-16)
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.manage   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ModelVersionInput' }
+      responses:
+        '201':
+          description: 등록됨(candidate)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelVersion' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/admin/models/{modelId}/evaluate:
+    parameters:
+      - $ref: '#/components/parameters/ModelId'
+    post:
+      tags: [관리]
+      summary: 그 모델의 평가 대상 전체 실행 (UC9, FR-17, G20·G21, D51 — M3는 사람 항목만, 대상 0개면 409 no_eval_items)
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.manage   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [versionId]
+              properties:
+                versionId: { type: string }
+      responses:
+        '202':
+          description: 평가 접수
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvalRun' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/admin/eval-runs/{runId}:
+    get:
+      tags: [관리]
+      summary: 평가 진행·보고서 (UC9 8.4·8.5)
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.manage   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      responses:
+        '200':
+          description: 평가 기록과 항목별 결과(기대 대비·낮춤·오인 사례)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvalRun' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [관리]
+      summary: 판단 기록 — 통과/보류와 근거 (UC9 8.6)
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.manage   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verdict, rationale]
+              properties:
+                verdict: { type: string, enum: [pass, hold], description: SD_03 evaluation.verdict }
+                rationale: { type: string }
+      responses:
+        '200':
+          description: 기록됨 — 갱신된 평가 기록(GET과 같은 모양)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvalRun' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+  /v1/admin/models/{modelId}/promote:
+    parameters:
+      - $ref: '#/components/parameters/ModelId'
+    post:
+      tags: [관리]
+      summary: 승격 (UC9, BR-MDL-03·07, D5, G22) — 라이선스 확인 + 완료·통과 평가 필수
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.manage   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [versionId, evalRunId]
+              properties:
+                versionId: { type: string }
+                evalRunId: { type: string }
+      responses:
+        '200':
+          description: 활성 전환, 직전 활성은 롤백 후보
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelManifest' }
+        '403': { $ref: '#/components/responses/ForbiddenRole' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/admin/models/{modelId}/rollback:
+    parameters:
+      - $ref: '#/components/parameters/ModelId'
+    post:
+      tags: [관리]
+      summary: 롤백 — 재평가 없이 즉시, 새 작업부터 (D5)
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.manage   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500, description: '사유 필수(SD_03 chk_re_rollback·chk_re_deactivate). 분류 코드나 짧은 문장 — 가족 정보 없음' }
+      responses:
+        '200':
+          description: 롤백됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelManifest' }
+        '409':
+          description: 롤백 후보 없음(E8) — "첫 버전이라 되돌릴 후보가 없어요"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+  /v1/admin/models/{modelId}/deactivate:
+    parameters:
+      - $ref: '#/components/parameters/ModelId'
+    post:
+      tags: [관리]
+      summary: 비활성화(clarify 2026-09-28 — 롤백 후보 없는 첫 버전 문제) — 활성 버전을 retired로, release_event deactivate. 그 모델이 필요한 확정 선택지는 막힌다
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.manage   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500, description: '사유 필수(SD_03 chk_re_rollback·chk_re_deactivate). 분류 코드나 짧은 문장 — 가족 정보 없음' }
+      responses:
+        '200':
+          description: 해제됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelManifest' }
+        '409':
+          description: 활성 버전 없음 — reason `no_active_version`
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+  /v1/admin/eval-items:
+    get:
+      tags: [관리]
+      summary: 평가 묶음 목록 (FR-17)
+      security: [{ staffSession: [evaluator, integrator, operator] }]
+      x-permission: models.read   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      responses:
+        '200':
+          description: 평가 항목(시험 호출 선택용 포함)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/EvalItem' }
+    post:
+      tags: [관리]
+      summary: 평가 항목 등록 — 팀원 제작 작품만 (BR-MDL-04, G20)
+      security: [{ staffSession: [operator, evaluator] }]
+      x-permission: models.manage   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [category, expectedPath, makerAttested]
+              properties:
+                category: { type: string, enum: [person, non_person, capture_condition, sculpture, caption_input] }
+                shootingCondition: { type: string, maxLength: 80 }
+                expectedPath: { type: string, enum: [animated, relief, frame, sculpture, caption] }
+                makerAttested: { type: boolean, const: true, description: 'G20 팀원 제작 확인(SD_03 maker_attested)' }
+                photo: { type: string, format: binary }
+                inputText: { type: string, description: '설명 입력 세트(category=caption_input일 때만)' }
+      responses:
+        '201':
+          description: 등록됨 — 새 평가 항목 번호
+          content:
+            application/json:
+              schema: { type: object, required: [id], properties: { id: { type: string } } }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/admin/api-guide/spec:
+    get:
+      tags: [운영]
+      summary: "'API활용' 엔드포인트 탭 원천 — app-api + model-api 명세 4묶음과 활성 버전 대조 (UC11, BR-API-07·08, U17)"
+      security: [{ staffSession: [operator, integrator] }]
+      x-permission: apiGuide.use   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      responses:
+        '200':
+          description: 합친 명세와 대조 결과. 모델 명세를 못 읽으면 마지막 확인 명세와 시각
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string, enum: [보호자 앱, 운영, 관리, 모델 기능] }
+                        spec: { type: object }
+                  versionCheck:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        modelId: { type: string }
+                        specVersion: { type: [string, 'null'], description: 'model-api 명세 info.x-model-versions 값' }
+                        activeVersion: { type: [string, 'null'] }
+                        match: { type: boolean }
+                  fetchedAt: { type: [string, 'null'], format: date-time, description: '모델 기능 명세를 마지막으로 읽은 시각' }
+                  stale: { type: boolean, description: '이번에 model-api를 읽지 못해 마지막 확인 명세를 보여 줌' }
+  /v1/admin/api-guide/test-call:
+    post:
+      tags: [운영]
+      summary: 시험 호출 — 평가 묶음 작품만 (EXT3, BR-API-09, G23, D12·D17)
+      description: |
+        내부 시험 키(`api_key.key_kind='test'`, `npm run ops:key -- issue --kind test`로 발급해 app-api 환경 변수 `API_GUIDE_TEST_KEY`에 둔다)로
+        model-api `/v1/models/{function}`을 대신 호출한다. 가족 작품 ID는 받지 않는다. `evalItemId`는 사진이 있는 평가 묶음 항목이어야 한다 —
+        없거나 설명 입력 항목이면 422 `not_eval_item`(G23). 시험 키가 설정되지 않았으면 503 `not_saved`/`test_key_missing`. model-api 거절(401·403·413·422·429·503)은 같은 상태와 코드로 전달한다.
+      security: [{ staffSession: [operator, integrator] }]
+      x-permission: apiGuide.use   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [function, evalItemId]
+              properties:
+                function: { type: string, enum: [segment, classify, pose, relief] }
+                evalItemId: { type: string }
+      responses:
+        '202':
+          description: 외부 작업 등록됨(H15). 상태는 /v1/admin/api-guide/test-call/{jobId}
+          content:
+            application/json:
+              schema: { $ref: 'model-api.openapi.yaml#/components/schemas/ExtJob' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+  /v1/admin/api-guide/test-call/{jobId}:
+    get:
+      tags: [운영]
+      summary: 시험 호출 상태·결과(H16) — 결과 분류·모델 ID·버전·처리 시간·오류 분류
+      security: [{ staffSession: [operator, integrator] }]
+      x-permission: apiGuide.use   # D24 — 역할(보안 범위)은 api/src/auth/policy.ts와 같다
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      responses:
+        '200':
+          description: 외부 작업 상태
+          content:
+            application/json:
+              schema: { $ref: 'model-api.openapi.yaml#/components/schemas/ExtJob' }
+
+components:
+  securitySchemes:
+    guardianSession:
+      type: apiKey
+      in: cookie
+      name: uam_sid
+    staffSession:
+      type: apiKey
+      in: cookie
+      name: uam_ops_sid
+      description: 역할(operator/evaluator/integrator)은 security scope 목록으로 표기
+
+  parameters:
+    ChildId:
+      name: childId
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' }
+    ArtworkId:
+      name: artworkId
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' }
+    ModelId:
+      name: modelId
+      in: path
+      required: true
+      schema: { type: string, enum: [M1, M2, M3, M4, M5, M6, M7] }
+
+  responses:
+    Unauthorized:
+      description: 로그인 필요·자격 불일치·세션 무효(재설정 뒤 포함)(BR-ACC-02)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TokenInvalid:
+      description: 메일 링크 토큰이 만료·사용·무효 — 구분하지 않음(G27, 결정 ③)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RateLimited:
+      description: 요청 한도 초과
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ForbiddenRole:
+      description: 역할 없음(G1) — "이 화면을 볼 역할이 없어요"
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: 없음 또는 다른 가족 자원(존재를 숨김)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: 상태 전이 불가·`deleting`·승인된 설명 재생성·롤백 후보 없음 등
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    InvalidInput:
+      description: 형식 밖·판독 불가(G5) — reason `format` | `unreadable`
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PayloadTooLarge:
+      description: 20MB 초과(G5)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ValidationFailed:
+      description: 필드 검증 실패 — 빈 별칭·미래 제작일·연령 범위·비밀번호 확인 불일치 등
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotSaved:
+      description: 저장 실패 — 아무것도 남지 않음("접수되지 않았어요"/"저장되지 않았어요")
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          type: string
+          enum: [unauthorized, forbidden_role, not_found, conflict, invalid_input, payload_too_large, validation_failed, not_saved, llm_unavailable, token_invalid, email_unverified, rate_limited]
+        reason:
+          type: string
+          description: 세부 사유 코드 = gate_event.reason_code (예 format, unreadable, no_family, already_in_family, invite_owner_only, co_guardian_full, invite_email_mismatch, story_conflict, m6_preload_at_start_only, made_on_in_future, age_out_of_range, deleting, already_processing, caption_locked, no_rollback_candidate, license_unconfirmed, eval_incomplete, check_in_progress, not_check_sample, no_check_sample, version_retired, rule_not_checked, m6_check_p05, check_runner_missing)
+        gate: { type: string, description: 'SD_01 게이트 번호(예 G4). 화면 C2 차단 블록용', pattern: '^G[0-9]{1,2}$' }
+        detail:
+          type: string
+          description: 사람이 읽는 안내 한 문장(RFC 9457 detail) — 무엇이 틀렸고 부르는 쪽이 무엇을 하면 되는지. 화면 문구로 쓰지 않는다
+        fields:
+          type: array
+          items:
+            type: object
+            required: [name, reason]
+            properties:
+              name: { type: string, description: 틀린 칸 이름(경로·쿼리·본문) }
+              reason: { type: string, description: 'required · unrecognized · not_positive_integer · not_in_enum · not_date · invalid_type · too_small · too_big · invalid_string · invalid_enum_value · blank · too_long …' }
+              message: { type: string, description: 이 칸에 넣어야 할 올바른 값 안내(형식·길이·범위·허용 값) }
+        requestId: { type: string }
+
+    DeletionProgress:
+      type: object
+      required: [state]
+      description: 'S9 삭제 진행(D21). accepted = 접수 직후, waiting_stop = 실행 중 작업 멈춤 대기(G19 보류), deleting_files = 파일 삭제 중, done = 끝남'
+      properties:
+        state: { type: string, enum: [accepted, waiting_stop, deleting_files, done] }
+        gate: { type: [string, 'null'], description: 'waiting_stop이면 G19' }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+    StaffRole:
+      type: string
+      enum: [operator, evaluator, integrator]
+
+    ChildInput:
+      type: object
+      required: [alias]
+      additionalProperties: false
+      properties:
+        alias: { type: string, minLength: 1, maxLength: 20, description: '별칭만. 실명·생년월일 필드 없음(BR-CHD-01). 앞뒤 공백을 뺀 1~20자, 허용 문자 제한 없음(D22). DB 컬럼 VARCHAR(100)은 여유' }
+        character: { $ref: '#/components/schemas/CharacterKind' }
+        color: { $ref: '#/components/schemas/CharacterColor' }
+        museumStyle: { $ref: '#/components/schemas/MuseumStyle' }
+    Child:
+      type: object
+      required: [id, alias]
+      properties:
+        id: { type: string, description: '아이 ID — 아이를 구분하는 기준(D18)' }
+        alias: { type: string }
+        artworkCount: { type: integer, description: v_child_artwork_count }
+        aliasDuplicate: { type: boolean, description: '같은 가족에 같은 별칭이 이미 있음 — 저장은 했고 "같은 별칭이 이미 있어요" 안내만(FR-1 v2.2)' }
+        character: { oneOf: [{ $ref: '#/components/schemas/CharacterKind' }, { type: 'null' }], description: '캐릭터(D40) — 아직 안 골랐으면 null(화면 기본값)' }
+        color: { oneOf: [{ $ref: '#/components/schemas/CharacterColor' }, { type: 'null' }] }
+        museumStyle: { oneOf: [{ $ref: '#/components/schemas/MuseumStyle' }, { type: 'null' }] }
+    CharacterKind: { type: string, enum: [bear, rabbit, cat, dog, fox, penguin, dino, owl], description: '캐릭터 8종(D40) — 곰·토끼·고양이·강아지·여우·펭귄·공룡·부엉이, 자체 제작 그림' }
+    CharacterColor: { type: string, enum: [sunflower, peach, sky, leaf, lavender, cloud], description: '캐릭터 색 6(D40) — 해바라기·복숭아·하늘·풀잎·라벤더·구름' }
+    MuseumStyle: { type: string, enum: [glass_pyramid, white_spiral, column_temple, clock_station, brick_chimney, golden_dome, hanok_roof, silver_wave], description: '미술관 모양 8(D40) — 세계 유명 미술관·박물관 모티브(모양만, 이름·로고 없음 D33): 유리 피라미드·하얀 나선 탑·기둥 신전·시계탑 기차역·붉은 벽돌 굴뚝·황금 돔 궁전·기와 한옥·은빛 물결 지붕' }
+    TownChild:
+      type: object
+      required: [id, alias]
+      properties:
+        id: { type: string, description: '아이 ID — 방문 미술관 주소(/v1/visit/children/{id}/gallery). 내 아이면 내 미술관' }
+        alias: { type: string }
+        character: { oneOf: [{ $ref: '#/components/schemas/CharacterKind' }, { type: 'null' }] }
+        color: { oneOf: [{ $ref: '#/components/schemas/CharacterColor' }, { type: 'null' }] }
+        museumStyle: { oneOf: [{ $ref: '#/components/schemas/MuseumStyle' }, { type: 'null' }] }
+    TownBuilding:
+      type: object
+      required: [id, x, y, relation]
+      properties:
+        id: { type: string, description: '건물 id(서명한 불투명 값, 가족 번호 아님)' }
+        x: { type: integer, description: 마을 격자 칸 }
+        y: { type: integer }
+        relation: { type: string, enum: [mine, neighbor, stranger], description: 'stranger는 문 잠김 — 아래 children 없음' }
+        style: { oneOf: [{ $ref: '#/components/schemas/MuseumStyle' }, { type: 'null' }], description: '건물 모양 = 그 가족 첫 아이의 미술관 모양 [추론]' }
+        children: { type: array, items: { $ref: '#/components/schemas/TownChild' }, description: 'mine·neighbor만' }
+    ArtworkComment:
+      type: object
+      required: [id, body, createdAt, mine, author]
+      description: '(D46 ④) 부모 댓글 — 가족 안에서만'
+      properties:
+        id: { type: string }
+        body: { type: string, maxLength: 500 }
+        createdAt: { type: string, format: date-time }
+        mine: { type: boolean }
+        author: { type: string, enum: [me, owner, co, gone], description: 'me=나 · owner=만든 보호자 · co=공동 보호자 · gone=지운 계정' }
+    VisitGallery:
+      type: object
+      required: [child, rooms]
+      properties:
+        child: { $ref: '#/components/schemas/TownChild' }
+        rooms:
+          type: array
+          description: '전시실 1·2… (나이는 싣지 않는다)'
+          items:
+            type: object
+            required: [room, items]
+            properties:
+              room: { type: integer }
+              items:
+                type: array
+                items:
+                  type: object
+                  required: [id, kind, title]
+                  properties:
+                    id: { type: string }
+                    kind: { type: string, enum: [animated, relief, frame, sculpture] }
+                    title: { type: [string, 'null'] }
+                    primaryUrl: { type: [string, 'null'], description: '방문 전용 파일 경로 — frame은 그림 사진(고친 사진 우선), animated·relief·sculpture는 결과 파일' }
+                    auxUrl: { type: [string, 'null'], description: 'animated는 그림 사진(포스터) · relief는 오려 낸 그림(시차 앞면) · 그 밖 null' }
+                    making: { type: boolean, description: '(D46) 만들기 → 받침대(D45)' }
+
+    ArtworkState:
+      type: string
+      enum: [received, judging, awaiting_confirm, processing, awaiting_review, failed, approved, exhibited]
+      description: 'SD_03 artwork.status + 유도 exhibited(v_artwork_display). failed = 처리하지 못함. deleting 작품은 응답하지 않음(404)'
+    Suggestion:
+      type: string
+      enum: [animated, relief, frame, none]
+    ConfirmKind:
+      type: string
+      enum: [animated, relief, frame, sculpture]
+    ResultKind:
+      type: string
+      enum: [animated, relief, frame, sculpture]
+    Decision:
+      type: string
+      enum: [like, use_lower, frame, retake]
+    DowngradePath:
+      type: string
+      enum: [animated_to_relief, animated_to_frame, relief_to_frame, split_fail, sculpture_to_relief]
+      description: 'SD_03 stage_job.downgrade_cause (llm_to_template는 설명 쪽)'
+    Stage:
+      type: string
+      description: SD_03 stage_job.stage_kind
+      enum: [split, judge, animate_render, depth_relief, frame_compose, caption, sculpture]
+    StageStatus:
+      type: string
+      description: 화면 배지(C4) — 대기/진행 중/완료/다시 시도 중/처리하지 못함/취소
+      enum: [waiting, running, done, retrying, failed, cancelled]
+
+    ArtworkSummary:
+      type: object
+      required: [id, childId, state, updatedAt]
+      properties:
+        id: { type: string }
+        childId: { type: string }
+        state: { $ref: '#/components/schemas/ArtworkState' }
+        exhibited: { type: boolean, description: '(D34) 전시에 걸려 있음 — 걸린 채 다시 만드는 중(processing·awaiting_review·failed)에도 true' }
+        currentStage: { oneOf: [{ $ref: '#/components/schemas/Stage' }, { type: 'null' }] }
+        title: { type: [string, 'null'] }
+        thumbnailUrl: { type: [string, 'null'], description: '/v1/files/{token}' }
+        updatedAt: { type: string, format: date-time, description: '접수 시각(목록 정렬 기준). 상태 변화 감지에 쓰지 않는다 — 진행은 `state`·상세 폴링으로 본다(D21)' }
+
+    ArtworkDetail:
+      type: object
+      required: [id, childId, state, choices, stages]
+      properties:
+        id: { type: string }
+        childId: { type: string }
+        state: { $ref: '#/components/schemas/ArtworkState' }
+        exhibited: { type: boolean, description: '(D34) 전시에 걸려 있음. state는 다시 만드는 중·확인 대기·실패면 그 진행을, 아니면 걸렸을 때 exhibited를 보인다' }
+        hungResultKind:
+          description: '(D34) 지금 전시에 걸린 결과 종류(처리 상태와 따로). null=안 걸림'
+          oneOf: [{ $ref: '#/components/schemas/ResultKind' }, { type: 'null' }]
+        queued: { type: boolean, description: '판정 중(대기) 표시용' }
+        originalUrl: { type: [string, 'null'] }
+        photoUrl: { type: [string, 'null'], description: '(D39) 액자 · 전시 · 저장에 쓰는 사진 — 고쳤으면 고친 사진, 아니면 원본' }
+        photoEdited: { type: boolean, description: '(D39 폐기 — 늘 false)' }
+        making: { type: boolean, description: '(D46) 만들기(입체 작품) — 올릴 때 고름' }
+        locked: { type: boolean, description: '(D46) 올린 작품은 고정 — 늘 true(이야기 · 사진 · 종류를 고칠 수 없다, 삭제만)' }
+        cutoutUrl: { type: [string, 'null'] }
+        suggestion:
+          description: '제안 문구 코드만. 점수·확률·순위 없음(BR-SUG-02). null=제안 전'
+          oneOf: [{ $ref: '#/components/schemas/Suggestion' }, { type: 'null' }]
+        confirmedKind:
+          oneOf: [{ $ref: '#/components/schemas/ConfirmKind' }, { type: 'null' }]
+        choices:
+          type: array
+          description: 현재 상태에서 허용되는 행동(확정 선택지 또는 결정 선택지). 기본 선택 없음(UX2)
+          items: { type: string }
+        unavailableChoices:
+          type: array
+          description: '보이되 막아야 하는 선택지와 이유(S3·S5 C3 비활성). 예: 활성 버전이 없는 모델이 필요한 확정 선택지(clarify 2026-09-28, stage-job §2). 노출 설정이 꺼진 3D는 여기에도 싣지 않는다(D10)'
+          items:
+            type: object
+            required: [choice, reason]
+            properties:
+              choice: { type: string }
+              reason: { type: string, enum: [model_disabled, needs_result, original_unreadable] }
+        stages:
+          type: array
+          items:
+            type: object
+            required: [stage, status]
+            properties:
+              stage: { $ref: '#/components/schemas/Stage' }
+              status: { $ref: '#/components/schemas/StageStatus' }
+              attempt: { type: integer, minimum: 0, maximum: 3 }
+              downgraded: { type: boolean }
+              waitingForModel: { type: boolean, description: '이 단계 모델이 적재 중(hint=model_loading)이라 큐에서 기다림 — 오류 아님. 모델 이름·상태 원문은 싣지 않는다' }
+              etaSeconds: { type: [number, 'null'], description: '적재 남은 시간 짐작(있을 때만)' }
+        result:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [kind]
+              properties:
+                kind: { $ref: '#/components/schemas/ResultKind' }
+                primaryUrl: { type: [string, 'null'] }
+                auxUrl: { type: [string, 'null'] }
+                posterUrl: { type: [string, 'null'] }
+        downgrade:
+          description: 'UC3·UC4 화면에서만 쓰는 낮춤 표시(BR-FBK-03). 전시 응답에는 없음(D3)'
+          oneOf: [{ $ref: '#/components/schemas/DowngradePath' }, { type: 'null' }]
+        notDelivered:
+          type: object
+          description: '상태 failed(처리하지 못함) 안내 — 낮춘 결과가 아님(G9)'
+          properties:
+            frameAvailable: { type: boolean, description: 원본 읽기 가능 여부 }
+        decision:
+          oneOf: [{ $ref: '#/components/schemas/Decision' }, { type: 'null' }]
+        story: { $ref: '#/components/schemas/Story' }
+        caption:
+          oneOf: [{ $ref: '#/components/schemas/Caption' }, { type: 'null' }]
+        tagCandidates:
+          type: array
+          description: '(P0.5) 설명 키워드 후보. 판정 근거로 노출 금지'
+          items: { type: string }
+
+    Story:
+      type: object
+      properties:
+        updatedAt: { type: [string, 'null'], format: date-time, readOnly: true, description: 'story.updated_at — 동시 수정 판정 기준' }
+        title: { type: [string, 'null'], maxLength: 100 }
+        titleAuto: { type: boolean, readOnly: true, description: '(D34) 제목이 "제목 없는 그림 N"으로 자동으로 붙음. 보호자가 제목을 고치면 false' }
+        madeOnAuto: { type: boolean, readOnly: true, description: '(D46 ⑩) 그린 날을 비워 촬영일 · 올린 날로 채움 — 해설이 날짜를 단정하지 않는다' }
+        ageAuto: { type: boolean, readOnly: true, description: '(D46 ⑩) 나이를 비워 최근 나이로 채움 — 해설이 나이를 단정하지 않는다' }
+        madeOn: { description: '만든 날. 오늘이나 지난 날짜만 — 미래 날짜는 422 made_on_in_future(G11, 서버·DB 트리거가 막는다)', type: [string, 'null'], format: date }
+        ageAtMaking: { type: [integer, 'null'], minimum: 0, maximum: 18 }
+        childWords: { type: [string, 'null'], maxLength: 2000 }
+        guardianNote: { type: [string, 'null'], maxLength: 1000, description: '보호자 감상평(D25, BR-STY-04) — 선택, 입력 그대로 저장. 전시 조건 아님, AI 설명 입력에 넣지 않음' }
+    StoryInput:
+      allOf:
+        - $ref: '#/components/schemas/Story'
+        - type: object
+          properties:
+            baseUpdatedAt:
+              type: [string, 'null']
+              format: date-time
+              description: '화면이 불러온 이야기의 updatedAt. 저장 시점 값과 다르면 409 story_conflict(공동 보호자 동시 수정, FR-9). 새 이야기면 null'
+    StoryUpdatedAt:
+      type: object
+      properties:
+        updatedAt: { type: [string, 'null'], format: date-time }
+
+    CaptionRequest:
+      type: object
+      required: [keywords, selectedTags]
+      additionalProperties: false
+      description: '이미지·별칭·제목 필드 없음(BR-CAP-01). 발언·나이·제작일은 서버가 작품에서 채운다'
+      properties:
+        keywords: { type: array, maxItems: 5, items: { type: string, maxLength: 20 } }
+        selectedTags: { type: array, maxItems: 5, items: { type: string } }
+        fallback: { type: string, enum: [template, direct], description: 'LLM 소진·M6 비활성 뒤 보호자 선택(E1·E4) 또는 직접 쓰기(A3)' }
+        body: { type: string, minLength: 1, maxLength: 1000, description: 'fallback=direct일 때만 필수 — 보호자가 쓴 문장' }
+    Caption:
+      type: object
+      required: [id, source, aiAuthored, state]
+      properties:
+        id: { type: string }
+        body: { type: [string, 'null'] }
+        source: { type: string, enum: [llm, template, direct] }
+        aiAuthored: { type: boolean }
+        edited: { type: boolean }
+        state: { type: string, enum: [pending_approval, approved, discarded] }
+        generationCount: { type: integer }
+
+    Gallery:
+      type: object
+      required: [childId, groups]
+      properties:
+        childId: { type: string }
+        groups:
+          type: array
+          items:
+            type: object
+            required: [ageAtMaking, items]
+            properties:
+              ageAtMaking: { type: [integer, 'null'], description: '(D34) null = 나이 미정 묶음(맨 뒤)' }
+              items:
+                type: array
+                items: { $ref: '#/components/schemas/GalleryItem' }
+    GalleryItem:
+      type: object
+      required: [id, kind, title, madeOn, ageAtMaking]
+      description: '낮춤·원인·점수 필드 없음(D3, BR-EXH-04)'
+      properties:
+        id: { type: string }
+        kind: { $ref: '#/components/schemas/ResultKind' }
+        primaryUrl: { type: [string, 'null'] }
+        auxUrl: { type: [string, 'null'] }
+        posterUrl: { type: [string, 'null'] }
+        originalUrl: { type: string }
+        photoUrl: { type: [string, 'null'], description: '(D39) 원본 액자 그림 — 고쳤으면 고친 사진' }
+        making: { type: boolean, description: '(D46) 만들기 → 미술관 받침대(D45)' }
+        title: { type: string }
+        titleAuto: { type: boolean, description: '(D34) 자동 제목 — 화면은 "제목을 붙여 줄까요?"를 조용히 권한다' }
+        madeOnAuto: { type: boolean, description: '(D46 ⑩) 자동 그린 날' }
+        ageAuto: { type: boolean, description: '(D46 ⑩) 자동 나이' }
+        madeOn: { type: string, format: date }
+        ageAtMaking: { type: [integer, 'null'], description: '(D34) null = 나이 미정' }
+        childWords: { type: [string, 'null'] }
+        guardianNote: { type: [string, 'null'], description: '보호자 감상평(D25) — 월 라벨에 한마디와 따로' }
+        aiCaption:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                body: { type: string }
+                aiAuthored: { type: boolean }
+        backsideEstimated: { type: boolean, description: '(P1) "뒷면은 AI가 추정했어요"' }
+
+    ModelReadiness:
+      type: string
+      description: 'C10 칩 — 준비됨·미준비·비활성(라이선스 확인 전)·비활성(P0.5)·CPU 실행·비노출(P1)·확인 불가'
+      enum: [ready, not_ready, inactive_license, inactive_tier, cpu_fallback, hidden, unknown]
+    Readiness:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ready, not_ready] }
+        anyLoading: { type: boolean, description: '모델 적재 중이 하나라도 있음(오류 아님). 공개 응답에도 싣는다' }
+        checks:
+          type: object
+          properties:
+            db: { type: boolean }
+            queue: { type: boolean }
+            storage: { type: boolean }
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              modelId: { type: string }
+              servingGroup: { type: string, enum: [cpu_vision, gpu, llm] }
+              state: { $ref: '#/components/schemas/ModelReadiness' }
+              activeVersion: { type: [string, 'null'] }
+              lastCheck:
+                description: '팀원 세션일 때만. 이 모델의 가장 최근 점검(D20). 준비 확인이 점검을 일으키지는 않는다'
+                type: [object, 'null']
+                properties:
+                  status: { type: string, enum: [queued, running, passed, failed] }
+                  failReason: { type: [string, 'null'] }
+                  finishedAt: { type: [string, 'null'], format: date-time }
+
+    ModelCheck:
+      type: object
+      description: '모델 점검 기록(D20, SD_03 model_check). 점수·객체 키·출력 파일 없음(BR-OPS-05·06)'
+      required: [id, modelId, versionId, versionLabel, evalItemId, status, requestedAt]
+      properties:
+        id: { type: string }
+        modelId: { type: string }
+        versionId: { type: string }
+        versionLabel: { type: string }
+        releaseState: { type: string, enum: [candidate, active, rollback_candidate, retired] }
+        evalItemId: { type: string }
+        status: { type: string, enum: [queued, running, passed, failed], description: 'passed = 오류 없이 끝나고 출력 형식이 맞음' }
+        outcome: { type: [string, 'null'], enum: [ok, quality_below, null], description: '모델이 낸 결과 분류(기록만). quality_below도 통과' }
+        failReason: { type: [string, 'null'], enum: [engine_down, timeout, storage, db, model_not_ready, bad_output, null] }
+        processingMs: { type: [integer, 'null'], description: '어댑터 실행 시간(적재 시간 제외)' }
+        memoryMb: { type: [integer, 'null'] }
+        requestedAt: { type: string, format: date-time }
+        startedAt: { type: [string, 'null'], format: date-time }
+        finishedAt: { type: [string, 'null'], format: date-time }
+
+    Metrics:
+      type: object
+      description: '정의와 검증 계획이며 실적 아님. 식별 정보 없음(BR-OPS-04)'
+      properties:
+        period: { type: object, description: '기간을 주지 않으면 from·to는 null(전체 기간)', properties: { from: { type: [string, 'null'] }, to: { type: [string, 'null'] } } }
+        service:
+          type: object
+          properties:
+            firstApprovalRate: { type: [number, 'null'] }
+            suggestionModifyRate: { type: [number, 'null'] }
+            captionRuleFailRate: { type: [number, 'null'] }
+            unreachedCount: { type: integer }
+            deletionIncompleteCount: { type: integer }
+        causes:
+          type: object
+          description: 원인 5분류(서로 다른 항목)
+          properties:
+            guardianChoice: { type: integer }
+            modelDowngrade: { type: integer }
+            guardianSwitch: { type: integer }
+            infraFailure:
+              type: object
+              additionalProperties: { type: integer }
+            unreached: { type: integer }
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              modelId: { type: string }
+              modelVersion: { type: string }
+              servingGroup: { type: string }
+              attempts: { type: integer }
+              downgradeRate: { type: [number, 'null'] }
+              p95Ms: { type: [integer, 'null'] }
+              retryRate: { type: [number, 'null'] }
+        queues:
+          type: array
+          items:
+            type: object
+            properties:
+              servingGroup: { type: string, enum: [cpu_vision, gpu, llm, external] }
+              waiting: { type: integer }
+              oldestWaitSeconds: { type: [integer, 'null'] }
+        external:
+          type: array
+          items:
+            type: object
+            properties:
+              function: { type: string }
+              calls: { type: integer }
+              rejected: { type: integer }
+    UnreachedItem:
+      type: object
+      properties:
+        stageJobId: { type: string }
+        stage: { $ref: '#/components/schemas/Stage' }
+        modelId: { type: string }
+        modelVersion: { type: string }
+        errorClass: { type: string, enum: [engine_down, timeout, storage, db, model_not_ready] }
+        attempt: { type: integer }
+        durationMs: { type: [integer, 'null'] }
+        finishedAt: { type: string, format: date-time }
+
+    ModelVersionInput:
+      type: object
+      required: [version, weightsSha256, runtime, imageDigest, configHash, device]
+      properties:
+        version: { type: string }
+        weightsSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        runtime: { type: [string, 'null'], description: 'SD_03 model_version.runtime(NULL 허용) — 조회 때 기록이 없으면 null' }
+        imageDigest: { type: [string, 'null'], pattern: '^[a-f0-9]{64}$', description: '실행 환경 다이제스트(research R-03, SD_04 §9-2). 등록 요청에는 값이 있어야 한다(app-api 검사). 조회 때 SD_03 image_digest가 NULL인 버전(M4 규칙 파일 등)은 null' }
+        configHash: { type: string, pattern: '^[a-f0-9]{64}$' }
+        device: { type: [string, 'null'], enum: [cpu, gpu, null], description: 'SD_03 exec_device. Apple Silicon MPS는 gpu + runtime에 mps 표기. 조회 때 기록이 없으면 null(등록 요청에는 필수)' }
+        filePath: { type: [string, 'null'], description: 'SD_03 model_version.model_path(R1·U14, NULL 허용) — 조회 때 기록이 없으면 null' }
+        licenseRecord: { type: string }
+    ModelVersion:
+      allOf:
+        - $ref: '#/components/schemas/ModelVersionInput'
+        - type: object
+          properties:
+            id: { type: string }
+            licenseConfirmed: { type: boolean }
+            releaseState: { type: string, enum: [candidate, active, rollback_candidate, retired] }
+            latestEvalRunId: { type: [string, 'null'], description: '이 버전의 가장 최근 평가 기록(evaluation.evaluation_id). S11이 새로 고친 뒤에도 진행·판단·승격을 이어 가게 한다(2026-09-29 이제민). 평가 전이면 null' }
+    ModelManifest:
+      type: object
+      properties:
+        modelId: { type: string }
+        roleName: { type: string }
+        tier: { type: string, enum: [P0, P0.5, P1] }
+        servingGroup: { type: string, enum: [cpu_vision, gpu, llm] }
+        exposed: { type: boolean }
+        versions:
+          type: array
+          items: { $ref: '#/components/schemas/ModelVersion' }
+    EvalItem:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        shootingCondition: { type: [string, 'null'] }
+        expectedSuggestion: { type: [string, 'null'] }
+        expectedPath: { type: [string, 'null'] }
+    EvalRun:
+      type: object
+      properties:
+        id: { type: string }
+        versionId: { type: string }
+        doneCount: { type: integer }
+        incompleteCount: { type: integer }
+        itemTotal: { type: integer }
+        itemDone: { type: integer }
+        verdict: { type: [string, 'null'], enum: [pass, hold, null] }
+        rationale: { type: [string, 'null'] }
+        eligible: { type: boolean, description: v_promotion_eligibility.eligible }
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              evalItemId: { type: string }
+              status: { type: string, enum: [done, incomplete, timeout] }
+              expectedPath: { type: [string, 'null'], description: '이 모델 기준 기대 경로(D57 — M1·M5는 항목 기대 animated를 relief로 본다). actualPath와 같으면 일치' }
+              itemExpectedPath: { type: [string, 'null'], description: '평가 항목에 적힌 원래 기대 경로(eval_item.expected_path)' }
+              actualPath: { type: [string, 'null'] }
+              outcome: { type: [string, 'null'] }
+              downgradeReason: { type: [string, 'null'] }
+              misclassCode: { type: [string, 'null'] }
+              durationMs: { type: [integer, 'null'] }

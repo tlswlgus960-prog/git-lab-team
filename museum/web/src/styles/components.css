@@ -1,0 +1,93 @@
+/* 컴포넌트·적용 예시·상태 컴포넌트(C1·C2·C3·C6·C10) — design/style-guide/스타일가이드_우리아이미술관.html 에서 그대로 옮김(T011, R-20, D22). 고칠 때는 스타일가이드를 먼저 고친다. */
+/* ---------- 컴포넌트 ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;min-height:44px;border-radius:var(--r-pill);font:480 20px/1.40 var(--font-sans);letter-spacing:-.10px;text-decoration:none;transition:transform .12s ease}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--color-primary);color:var(--color-on-primary);padding:10px 20px}
+.btn-secondary{background:var(--color-canvas);color:var(--color-ink);padding:8px 18px 10px;box-shadow:inset 0 0 0 1px var(--color-accent-magenta)}
+.on-soft .btn-secondary{background:var(--color-canvas)}
+.btn-tertiary{background:var(--color-canvas);color:var(--color-ink);padding:8px 12px;border-radius:var(--r-full);font-weight:480}
+.btn-tertiary:hover{text-decoration:underline;text-underline-offset:4px}
+.btn-magenta{background:var(--color-accent-magenta);color:var(--color-on-primary);padding:10px 18px}
+.btn-icon{width:40px;height:40px;min-height:40px;padding:0;border-radius:var(--r-full);background:var(--color-surface-soft);color:var(--color-ink);font-size:20px}
+.btn-icon-inverse{background:rgba(255,255,255,.16);color:var(--color-inverse-ink)}
+@media (pointer:coarse){.btn-icon{width:44px;height:44px}}
+@media (max-width:560px){.btn-block-m{width:100%}}
+
+.tabs{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--color-hairline);border-radius:var(--r-pill);background:var(--color-canvas);max-width:100%;overflow-x:auto}
+.tab{border:0;background:var(--color-canvas);color:var(--color-ink);padding:8px 18px;border-radius:var(--r-pill);font:480 18px/1.4 var(--font-sans);cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--color-primary);color:var(--color-on-primary)}
+
+.field{display:grid;gap:var(--s-xs)}
+.field label{font:330 20px/1.40 var(--font-sans);letter-spacing:-.14px}
+.input{width:100%;background:var(--color-canvas);color:var(--color-ink);font:320 18px/1.45 var(--font-sans);letter-spacing:-.26px;padding:12px 14px;min-height:48px;border:1px solid var(--color-hairline);border-radius:var(--r-md)}
+.input:focus{outline:none;box-shadow:0 0 0 2px var(--color-ink)}
+.input.is-focus{box-shadow:0 0 0 2px var(--color-ink)}
+.input.proposal-border{border-color:#8a8a8a}
+.input.is-error{border-color:var(--color-ink);box-shadow:0 0 0 2px var(--color-ink)}
+.field .hint{font:330 16px/1.45 var(--font-sans)}
+
+.card{background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--r-lg);padding:var(--s-lg)}
+.tile{background:var(--color-surface-soft);border-radius:var(--r-md);padding:var(--s-md)}
+.tile-lg{background:var(--color-surface-soft);border-radius:var(--r-md);padding:var(--s-lg)}
+.row{display:flex;justify-content:space-between;gap:var(--s-md);padding:var(--s-sm) 0;border-bottom:1px solid var(--color-hairline-soft);font:330 16px/1.45 var(--font-sans)}
+.check{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:var(--r-full);color:var(--color-semantic-success);font-size:14px;font-weight:700}
+
+.cb{border-radius:var(--r-lg);padding:var(--s-xxl);color:var(--color-ink)}
+.cb-lime{background:var(--color-block-lime)} .cb-lilac{background:var(--color-block-lilac)}
+.cb-cream{background:var(--color-block-cream)} .cb-mint{background:var(--color-block-mint)}
+.cb-pink{background:var(--color-block-pink)} .cb-coral{background:var(--color-block-coral)}
+.cb-navy{background:var(--color-block-navy);color:var(--color-inverse-ink)}
+.cb .inner{max-width:760px}
+@media (max-width:768px){ .cb.full-bleed-m{border-radius:0;margin-left:calc(var(--gutter) * -1);margin-right:calc(var(--gutter) * -1);padding:var(--s-xl) var(--gutter)} }
+
+.promo{display:flex;align-items:center;justify-content:space-between;gap:var(--s-md);flex-wrap:wrap;background:var(--color-block-lilac);border-radius:var(--r-md);padding:var(--s-md) var(--s-lg);font:330 16px/1.45 var(--font-sans)}
+
+/* ---------- 적용 예시 (우리 아이 미술관) ---------- */
+.art{background:var(--color-surface-soft);border-radius:var(--r-md);padding:var(--s-md);display:grid;gap:var(--s-sm)}
+.art figure{margin:0;aspect-ratio:4/3;border-radius:var(--r-md);background:var(--color-canvas);display:grid;place-items:center;overflow:hidden}
+.art figure svg{width:78%;height:78%}
+.art .title{font:700 20px/1.35 var(--font-sans)}
+.art .words{font:330 16px/1.45 var(--font-sans)}
+.age-head{display:flex;align-items:baseline;gap:var(--s-md);margin:var(--s-xl) 0 var(--s-md)}
+.status{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--color-ink);border-radius:var(--r-pill);padding:6px 12px;font:400 12px/1 var(--font-mono);letter-spacing:.6px;text-transform:uppercase;background:var(--color-canvas)}
+.status .dot{width:8px;height:8px;border-radius:var(--r-full);background:var(--color-ink)}
+.status.is-quiet{border-color:var(--color-hairline)}
+.status.is-quiet .dot{background:transparent;border:1px solid var(--color-ink)}
+.suggest{display:flex;gap:var(--s-sm);flex-wrap:wrap}
+.chip-opt{border:1px solid var(--color-hairline);background:var(--color-canvas);border-radius:var(--r-pill);padding:10px 18px;font:480 18px/1.4 var(--font-sans);cursor:pointer;min-height:44px}
+.chip-opt[aria-pressed="true"]{background:var(--color-primary);color:var(--color-on-primary);border-color:var(--color-primary)}
+.chip-opt .sub{font:400 12px/1 var(--font-mono);letter-spacing:.6px;text-transform:uppercase;margin-left:8px}
+.ai-mark{display:inline-block;font:400 12px/1 var(--font-mono);letter-spacing:.6px;text-transform:uppercase;border:1px solid var(--color-ink);border-radius:var(--r-sm);padding:4px 6px}
+.quote{font:330 20px/1.40 var(--font-sans);letter-spacing:-.14px}
+
+/* ---------- 상태 컴포넌트 C1·C2·C3·C10 (SD_02 §3-5 · D22 시안) ---------- */
+.rail{display:flex;flex-wrap:wrap;gap:6px;align-items:center;list-style:none;margin:0;padding:0}
+.rail li{border:1px solid var(--color-hairline);border-radius:var(--r-pill);padding:6px 12px;font:330 16px/1.2 var(--font-sans);background:var(--color-canvas)}
+.rail li.is-now{background:var(--color-inverse-canvas);color:var(--color-inverse-ink);border-color:var(--color-inverse-canvas);font-weight:540}
+.rail li.is-blocked{border:2px solid var(--color-ink);font-weight:540}
+.rail li .gate{font:400 12px/1 var(--font-mono);letter-spacing:.6px;margin-left:6px}
+.gblock{border-radius:var(--r-md);padding:var(--s-md);display:grid;gap:6px;font:330 16px/1.45 var(--font-sans)}
+.gblock .head{font:540 18px/1.35 var(--font-sans)}
+.gblock .head .gate{font:400 12px/1 var(--font-mono);letter-spacing:.6px;margin-left:8px}
+.gblock dl{display:grid;grid-template-columns:auto 1fr;gap:4px var(--s-sm);margin:0}
+.gblock dt{font-weight:540} .gblock dd{margin:0}
+.gblock .acts{display:flex;gap:var(--s-sm);flex-wrap:wrap;margin-top:6px}
+.gblock.is-block{border:2px solid var(--color-ink);background:var(--color-canvas)}
+.gblock.is-hold{border:2px dashed var(--color-ink);background:var(--color-block-cream)}
+.gblock.is-final{border:1px solid var(--color-hairline);background:var(--color-surface-soft)}
+.downgrade{border-radius:var(--r-md);padding:var(--s-md);background:var(--color-block-lilac);font:330 16px/1.45 var(--font-sans)}
+.btn[aria-disabled="true"]{background:var(--color-hairline-soft);color:var(--color-ink);cursor:not-allowed}
+/* C3: 이름은 한 줄, 사유는 버튼 안 둘째 줄(SD_02 §3-3 C3 줄바꿈) */
+.btn .lbl{white-space:nowrap}
+.btn.has-why{flex-direction:column;gap:2px;padding-top:8px;padding-bottom:8px}
+.btn[aria-disabled="true"] .why{font:330 14px/1.3 var(--font-sans);margin:0;text-align:center;white-space:normal}
+.mchip{display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-pill);padding:6px 12px;font:400 12px/1 var(--font-mono);letter-spacing:.6px;border:1px solid transparent;min-height:28px}
+.mchip.ready{background:var(--color-inverse-canvas);color:var(--color-inverse-ink)}
+.mchip.not-ready,.mchip.cold{border-color:var(--color-ink);background:var(--color-canvas)}
+.mchip.loading{border-color:var(--color-ink);background:var(--color-canvas)}
+.mchip.loading .bar{display:inline-block;width:48px;height:6px;border-radius:var(--r-xs);background:linear-gradient(90deg,var(--color-block-mint) 60%,var(--color-hairline-soft) 60%)}
+.mchip.failed{border:2px solid var(--color-ink);background:var(--color-canvas)}
+.mchip.inactive{border-color:var(--color-hairline);background:repeating-linear-gradient(135deg,var(--color-canvas) 0 6px,var(--color-hairline) 6px 8px)}
+.mchip.cpu{background:var(--color-block-mint)}
+.mchip.hidden{border:1px dashed var(--color-hairline);background:var(--color-canvas)}
+.mchip.unknown{background:var(--color-hairline-soft);border-color:var(--color-hairline)}

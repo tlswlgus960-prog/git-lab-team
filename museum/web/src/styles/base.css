@@ -1,0 +1,22 @@
+/* 기본 요소·레이아웃 — design/style-guide/스타일가이드_우리아이미술관.html 에서 그대로 옮김(T011, R-20, D22). 고칠 때는 스타일가이드를 먼저 고친다. */
+/* ---------- 기본 ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-canvas);color:var(--color-ink);font:320 18px/1.45 var(--font-sans);letter-spacing:-.26px;font-feature-settings:"kern";overflow-x:hidden}
+a{color:inherit}
+code,kbd{font:400 .85em/1.4 var(--font-mono);background:var(--color-surface-soft);padding:1px 6px;border-radius:var(--r-sm);letter-spacing:0}
+.container{max-width:var(--container);margin:0 auto;padding:0 var(--gutter)}
+section.block{margin:var(--s-section) auto}
+h2,h3,h4{margin:0}
+p{margin:0}
+.stack>*+*{margin-top:var(--s-md)}
+.grid{display:grid;gap:var(--s-lg)}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:960px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.sec-head{display:grid;gap:var(--s-sm);margin-bottom:var(--s-xl)}
+.note{border-left:2px solid var(--color-ink);padding:var(--s-xs) var(--s-md);background:var(--color-surface-soft);border-radius:0 var(--r-md) var(--r-md) 0}
+.tag-proposal{display:inline-block;border:1px solid var(--color-ink);border-radius:var(--r-pill);padding:4px 10px}
+:focus-visible{outline:2px solid var(--color-ink);outline-offset:3px}

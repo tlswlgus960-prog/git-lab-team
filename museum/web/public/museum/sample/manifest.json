@@ -1,0 +1,83 @@
+{
+  "note": "견본 미술관 그림 — 팀이 코드로 그린 견본(실제 아이 그림 · 사진 아님)",
+  "works": [
+    {
+      "file": "house-sun.svg",
+      "title": "해님 아래 우리 집",
+      "kind": "frame",
+      "age": 5
+    },
+    {
+      "file": "family.svg",
+      "title": "우리 가족 소풍",
+      "kind": "frame",
+      "age": 5
+    },
+    {
+      "file": "cat.svg",
+      "title": "낮잠 자는 고양이",
+      "kind": "frame",
+      "age": 5
+    },
+    {
+      "file": "snowman.svg",
+      "title": "눈사람 친구",
+      "kind": "frame",
+      "age": 5
+    },
+    {
+      "file": "rainbow.svg",
+      "title": "비 온 뒤 무지개",
+      "kind": "frame",
+      "age": 6
+    },
+    {
+      "file": "garden.svg",
+      "title": "꽃밭에 나비",
+      "kind": "frame",
+      "age": 6
+    },
+    {
+      "file": "rocket.svg",
+      "title": "달나라 가는 로켓",
+      "kind": "frame",
+      "age": 6
+    },
+    {
+      "file": "balloon.svg",
+      "title": "하늘로 풍선",
+      "kind": "frame",
+      "age": 6
+    },
+    {
+      "file": "fish.svg",
+      "title": "바닷속 친구들",
+      "kind": "frame",
+      "age": 7
+    },
+    {
+      "file": "tree.svg",
+      "title": "사과나무",
+      "kind": "frame",
+      "age": 7
+    },
+    {
+      "file": "car.svg",
+      "title": "빨간 자동차",
+      "kind": "frame",
+      "age": 7
+    }
+  ],
+  "making": [
+    {
+      "file": "clay-bear.svg",
+      "title": "찰흙 곰 인형",
+      "kind": "relief"
+    },
+    {
+      "file": "paper-robot.svg",
+      "title": "종이 상자 로봇",
+      "kind": "relief"
+    }
+  ]
+}

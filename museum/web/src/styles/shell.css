@@ -1,0 +1,13 @@
+/* 셸 헤더(C9, T039) — 스타일가이드 top nav 규칙을 옮기고, 좁은 화면에서는 메뉴를 숨기지 않고 다음 줄로 내린다
+   (가이드는 960px 미만에서 목차를 숨기지만 앱 메뉴는 휴대폰에서도 써야 한다 — [추론], SD_02 모바일 우선). */
+.topnav{position:sticky;top:0;z-index:10;background:var(--color-canvas);border-bottom:1px solid var(--color-accent-magenta)}
+.topnav .container{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:var(--s-md);flex-wrap:wrap;padding-top:var(--s-xs);padding-bottom:var(--s-xs)}
+.wordmark{font:800 21px/1 var(--font-sans);letter-spacing:-.6px;text-decoration:none;white-space:nowrap;color:var(--color-accent-magenta)}
+.navlinks{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.navlinks a{font:330 16px/1.45 var(--font-sans);text-decoration:none;padding:8px 10px;border-radius:var(--r-full);min-height:44px;display:inline-flex;align-items:center}
+.navlinks a:hover{background:var(--color-surface-soft)}
+.navlinks a.is-active{background:var(--color-inverse-canvas);color:var(--color-inverse-ink)}
+.nav-cta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav-cta .btn{font-size:16px;min-height:44px;padding:6px 16px}
+@media (max-width:768px){ .shell-menu{order:3;width:100%;overflow-x:auto;flex-wrap:nowrap} .shell-menu a{white-space:nowrap;flex-shrink:0} }
+.page{padding-top:var(--s-xl);padding-bottom:var(--s-section)}

@@ -1,0 +1,42 @@
+/* 움직임 줄이기(SD_02 §17 접근성 · 1550행) — 앱 전체. 스타일가이드에서 옮긴 base/components는 건드리지 않고 여기서 끈다.
+   전환·애니메이션·부드러운 스크롤을 모두 끈다. 재생 토글은 화면(SideBySide·MuseumView)이 정지 화면 + 원본을 먼저 보인다. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0s !important; transition-delay: 0s !important; animation: none !important; scroll-behavior: auto !important; }
+}
+
+/* 움직임 · 전환(D38, SD_02 §17-11): 스프링 토큰 · 걷는 화면 전환(View Transitions) · 차례로 떠오르기 · 액자 기울임. transform · opacity만. */
+:root{--ease-spring:cubic-bezier(.32,.72,0,1);--dur-1:240ms;--dur-2:480ms;--dur-3:800ms}
+
+/* 화면 전환 — 라우터가 html[data-vt]에 방향을 적는다(router/transitions.ts) */
+::view-transition-old(root),::view-transition-new(root){animation-duration:var(--dur-2);animation-timing-function:var(--ease-spring);animation-fill-mode:both}
+html[data-vt="forward"]::view-transition-old(root){animation-name:vt-leave-behind}
+html[data-vt="forward"]::view-transition-new(root){animation-name:vt-come-near}
+html[data-vt="back"]::view-transition-old(root){animation-name:vt-leave-near}
+html[data-vt="back"]::view-transition-new(root){animation-name:vt-come-behind}
+html[data-vt="door"]::view-transition-old(root){animation:vt-door-out 640ms var(--ease-spring) both}
+html[data-vt="door"]::view-transition-new(root){animation:vt-door-in 640ms var(--ease-spring) both}
+@keyframes vt-come-near{from{opacity:0;transform:scale(.94);filter:blur(6px)}}
+@keyframes vt-leave-behind{to{opacity:0;transform:scale(1.05)}}
+@keyframes vt-leave-near{to{opacity:0;transform:scale(.95);filter:blur(4px)}}
+@keyframes vt-come-behind{from{opacity:0;transform:scale(1.05)}}
+@keyframes vt-door-out{to{opacity:.2;transform:translateX(-14%) scale(.98)}}
+@keyframes vt-door-in{from{opacity:0;transform:translateX(22%)}}
+/* 메뉴 섬은 움직이지 않는다 · 작품 액자는 이어진다(공유 요소, view-transition-name: art-{id}) */
+.mbar{view-transition-name:mbar}
+::view-transition-group(mbar),::view-transition-old(mbar),::view-transition-new(mbar){animation:none} /* D47: 화면 전환 때 메뉴 줄은 제자리 */
+::view-transition-group(*){animation-duration:var(--dur-2);animation-timing-function:var(--ease-spring)}
+
+/* 차례로 떠오르기(v-reveal) */
+[data-reveal]{opacity:0;transform:translateY(16px);transition:opacity var(--dur-2) var(--ease-spring),transform var(--dur-2) var(--ease-spring);transition-delay:calc(var(--i,0) * 60ms)}
+[data-reveal].is-in{opacity:1;transform:none}
+
+/* 액자 기울임(v-tilt) — 마우스만 */
+[data-tilt]{transition:transform var(--dur-1) var(--ease-spring);transform:perspective(900px) rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg));will-change:auto}
+[data-tilt]:active{transform:perspective(900px) rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg)) scale(.98)}
+
+@media (prefers-reduced-motion:reduce){
+  ::view-transition-old(root),::view-transition-new(root),::view-transition-group(*){animation:vt-fade 200ms linear both!important}
+  [data-reveal]{opacity:1;transform:none;transition:none}
+  [data-tilt]{transform:none!important;transition:none}
+}
+@keyframes vt-fade{from{opacity:0}}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+<title>낮잠 자는 고양이 (견본 그림 — 팀이 코드로 그림)</title>
+<defs><filter id="c" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="5" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+<pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></pattern></defs>
+<rect width="400" height="300" fill="#FFFDF6"/><g filter="url(#c)" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="200" cy="200" rx="120" ry="60" fill="#FFB074" stroke="#C4632A" stroke-width="5"/>
+<circle cx="110" cy="165" r="48" fill="#FFB074" stroke="#C4632A" stroke-width="5"/>
+<path d="M75 130 L80 95 L105 120 M125 118 L145 92 L148 130" fill="#FFB074" stroke="#C4632A" stroke-width="5"/>
+<path d="M92 165 q8 6 16 0 M122 165 q8 6 16 0" stroke="#4A3441" stroke-width="4" fill="none"/>
+<path d="M60 175 h-30 M60 185 h-28 M160 175 h28" stroke="#4A3441" stroke-width="3"/>
+<path d="M318 200 q50 -10 40 -70" stroke="#C4632A" stroke-width="16" fill="none"/>
+<path d="M200 170 l12 -20 M240 180 l12 -20 M280 190 l12 -20" stroke="#C4632A" stroke-width="5"/>
+<text x="300" y="80" font-size="34" fill="#6E8BD6" font-family="sans-serif">z z</text>
+</g></svg>

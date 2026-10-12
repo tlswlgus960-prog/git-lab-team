@@ -1,0 +1,457 @@
+openapi: 3.1.0
+info:
+  title: 우리 아이 미술관 — 모델 기능 API (model-api)
+  version: 0.1.0
+  contact:
+    name: 1팀 우리 아이 미술관 — 팀 슬랙 채널(문의 때 응답 헤더 X-Request-ID 번호를 함께)
+  description: |
+    외부 클라이언트용 모델 기능 엔드포인트(UC12, FR-28, D17). Python 3.11 가상환경 + FastAPI + uvicorn (R3, research R-10).
+    FastAPI가 이 문서와 같은 스키마로 `/v1/models/openapi.json`을 내보내고, 'API활용' 메뉴가 이를 읽는다(BR-API-08).
+    내보낼 때 `info.x-model-versions`에 이 프로세스가 기동 시 읽은 모델별 버전 라벨(`{"M1": "<version_label>", …}`, 활성 버전 없으면 null)을 싣는다 — app-api가 DB 활성 버전과 대조해 어긋나면 경고한다(2026-09-28 추가, B T124).
+    - 인증: `X-API-Key` 필수(BR-API-03). 키 종류는 SD_03 `api_key.key_kind` — `team_internal`(팀) · `course_internal`(과정) · `external`(팀 밖) · `test`('API활용' 시험 호출). U12 확정 전에는 `external` 키를 발급하지 않는다(D17).
+    - `pose`는 `team_internal`·`test` 키만 — 그 밖의 키는 403 `forbidden_scope`(D17, 트리거 trg_external_job_bi).
+    - 한도 판정은 `external_call_log`(ix_ecl_key_time)와 진행 중 `external_job` 수로 한다. 모든 호출(거절 포함)을 `external_call_log`에 남긴다(입력·키 원문 없음).
+    - `classify`는 OpenCLIP 가중치 라이선스 확정 기록(A2) 전까지 503 `model_not_ready`(BR-MDL-07).
+    - 승격된 활성 버전만 쓴다. 활성 버전이 없으면 503 `model_not_ready`, 작업을 만들지 않는다.
+    - 보호자 단계 작업과 다른 대기열(`external_job`), 낮은 우선순위, 서빙군별 외부 동시 처리 1건 [예시값 U12].
+    - 입력·결과는 워커 임시 영역(`ext/`)에만 두고, 로그·원본·결과 저장소에 남기지 않는다(BR-API-05, D8).
+      파일 약속(2026-09-28, B·A T122): model-api가 입력을 `ext/{ext_job_id}/input.{jpg|png|heic}`로 쓰고 작업을 등록한다. 워커는 결과를 `ext/{ext_job_id}/result.json`(ExtResult의 기능별 필드)으로 쓰고
+      `external_job.result_temp_ref`에 그 키를 적는다. 결과 수령(`/result`) 때 model-api가 본문을 돌려준 뒤 `ext/{ext_job_id}/`를 지우고 `delivered_at`을 적으며 `result_temp_ref`를 비운다(chk_ej_delivered).
+      만료(결과 보관 1시간)는 sweeper가 같은 방식으로 지운다.
+    - DB·저장소 오류는 503(`chk_ecl_status`에 500이 없다).
+    - 상태코드와 누가 고치나(2026-09-30, 점검표 E7):
+
+      | 코드 | 뜻 | 누가 고치나 |
+      |---|---|---|
+      | 200 · 202 | 정상(202는 작업 접수 — `GET /v1/models/jobs/{jobId}`로 상태, 끝나면 `/result` 1회 수령) | 해당 없음 |
+      | 400 | (쓰지 않음 — 입력 오류는 422) | — |
+      | 401 | API 키 없음·무효·폐기 | 부르는 쪽 — 발급받은 키를 `X-API-Key`에 |
+      | 403 | 이 키 종류로 못 쓰는 기능(`pose`는 팀·시험 키만) | 부르는 쪽 — 허용된 키로 |
+      | 404 | 없는 기능·작업(다른 키의 작업도 404)·결과 만료·이미 수령 | 부르는 쪽 — 경로·작업 번호 확인 |
+      | 413 | 이미지 20MB 초과 | 부르는 쪽 — 줄여서 |
+      | 422 | 입력 오류(이미지 1장·`image` 칸 하나·JPEG/PNG/HEIC, `fields[].message`) | 부르는 쪽 — 값을 고쳐서 |
+      | 429 | 요청 한도(분당·하루·동시) 초과, `Retry-After` | 부르는 쪽 — 기다렸다가 |
+      | 503 | 모델 준비 안 됨·엔진·DB·저장소 문제 | 우리 팀 — 부르는 쪽은 요청을 고치지 않고 다시 시도 |
+      | 504 | 설명(caption) 처리 시간 초과 | 우리 팀 — 다시 시도 |
+
+      500은 내보내지 않는다(`chk_ecl_status`) — 예상 못 한 오류도 503으로 감싸고 `requestId`로 추적한다.
+    - 판단보류(2026-09-30, 점검표 E5): 모델 결과의 품질이 기준에 못 미치면 오류가 아니라 정상 응답이다 — 작업은 `done`, 결과 `outcome`이 `quality_below`로 온다(200).
+      부르는 쪽은 이 결과를 그대로 쓰지 말고 사람이 확인하거나 다른 이미지로 다시 요청한다(행선지 = 부르는 쪽의 사람 검토). 점수·확률은 싣지 않는다.
+      팀은 `external_call_log`·`external_job`의 `quality_below` 건수를 운영 지표로 본다.
+    - 오류 안내·요청 번호(2026-09-30, API 서비스 점검표 W5·E4·E7·L1 — app-api와 같은 규칙): 모든 오류 본문에 `detail`(한국어 한 문장 — 무엇이 틀렸고 부르는 쪽이 무엇을 하면 되는지)과
+      `requestId`를 싣고, 입력 오류(422)는 `fields[].message`로 칸마다 올바른 값을 알린다. 4xx는 부르는 쪽이 요청을 고치고, 503·504는 서버 쪽이라 요청을 고치지 않고 다시 시도한다.
+      모든 응답 헤더에 `X-Request-ID`(요청 값이 1~128자 영문·숫자·`.`·`_`·`-`면 그대로, 아니면 UUID).
+    - 한도 [예시값 U12]: 키당 분당 30건 · 하루 1,000건 · 동시 진행 2건 · 요청당 이미지 1장 · 20MB · 결과 보관 1시간.
+    - 가족 데이터 경로(`/v1/artworks…`, `/v1/gallery`)는 이 서버에 없고, app-api는 API 키를 받지 않는다(BR-API-06).
+    - `caption`은 P0.5 — P0에서는 404. 3D(`sculpture`)는 항상 404(D9).
+servers:
+  - url: /
+security:
+  - apiKey: []
+
+paths:
+  /v1/models/{function}:
+    parameters:
+      - name: function
+        in: path
+        required: true
+        schema: { type: string, enum: [segment, classify, pose, relief] }
+    post:
+      summary: 이미지 모델 기능 호출 — 비동기(202 + job_id)
+      description: |
+        segment = M1 마스크·컷아웃 · classify = M2 종류·태그(점수 비노출) · pose = M3 관절 + M4 기하 규칙(렌더 없음) · relief = M1 + M5 깊이(M1 품질 미달이면 outcome `quality_below`).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              additionalProperties: false
+              properties:
+                image: { type: string, format: binary, description: 'JPEG·PNG·HEIC 1장, 20MB 이하' }
+      responses:
+        '202':
+          description: 작업 등록됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ForbiddenScope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422': { $ref: '#/components/responses/InvalidInput' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/ModelNotReady' }
+
+  /v1/models/caption:
+    post:
+      summary: (P0.5) 설명 생성 — 동기 200. P0에서는 404
+      description: 키·한도 확인 뒤 내부 `llm-server`(127.0.0.1:8200 `POST /v1/caption`)로 동기 프록시한다(llm-contract.md). external_job을 만들지 않는다. 입력에 이미지·이름 필드가 있으면 422 `invalid_input`. 규칙 검사 통과 문장만 돌려준다(BR-CAP-07). 시간 초과는 504.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [keywords]
+              additionalProperties: false
+              properties:
+                keywords: { type: array, minItems: 1, maxItems: 5, items: { type: string, maxLength: 20 } }
+                tags: { type: array, maxItems: 5, items: { type: string } }
+                words: { type: string, maxLength: 500, description: 발언 원문 }
+                ageAtMaking: { type: integer, minimum: 0, maximum: 18 }
+                madeOn: { type: string, format: date }
+      responses:
+        '200':
+          description: 설명
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  body: { type: string }
+                  source: { type: string, enum: [llm, template] }
+                  aiAuthored: { type: boolean, const: true }
+                  model: { $ref: '#/components/schemas/ModelRef' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InvalidInput' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/ModelNotReady' }
+        '504':
+          description: 시간 초과
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/models/jobs/{jobId}:
+    get:
+      summary: 외부 작업 상태 (D13)
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, pattern: '^[0-9]+$' } }
+      responses:
+        '200':
+          description: 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/models/jobs/{jobId}/result:
+    get:
+      summary: 결과 1회 수령 — 전달 즉시 삭제, 재조회 404 (SD_01 10.7, D8)
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, pattern: '^[0-9]+$' } }
+      responses:
+        '200':
+          description: 결과. 기능별 형식
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        # 아직 done이 아니면 404 result_not_ready — SD_03 chk_ecl_status에 409가 없고 모든 호출을 기록하므로(2026-09-28, B)
+
+  /v1/models/docs:
+    get:
+      summary: 계약 문서 화면(Swagger UI, 키 없이 · 2026-09-30 API 개선 A11)
+      description: 이 문서(`/v1/models/openapi.json`)를 그대로 읽어 보여 준다 — FastAPI 자동 문서가 아니라 계약 정본과 같은 내용. Try it out은 `/v1/models/health`·`openapi.json`은 키 없이, 기능 경로는 `X-API-Key`를 넣어야 200·202.
+      security: []
+      responses:
+        '200':
+          description: HTML
+          content:
+            text/html: {}
+  /v1/models/health:
+    get:
+      summary: 모델 기능 준비 상태 (키 없이 · 2026-09-30 API 개선 A1·A3·A4)
+      description: |
+        적재 상태를 실제로 읽는다(워커가 남긴 적재 기록 — /internal/ready와 같은 원천). 기능마다 쓰는 모델(segment M1 · classify M2 · pose M3 · relief M1+M5) 중
+        활성 버전이 있는 모델이 모두 준비됐으면 200 `ok`, 하나라도 적재 중·아직 안 올라옴이면 503 `loading`, 적재 실패·워커 없음이면 503 `error`.
+        활성 버전이 없는 기능은 `disabled`로 표시하고 전체 판정에서 뺀다(부르면 503 model_not_ready). 기기·경로·점수 같은 내부 값은 싣지 않는다.
+      security: []
+      responses:
+        '200':
+          description: 준비됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelHealth' }
+        '503':
+          description: 준비 안 됨(적재 중·실패) — 부르는 쪽은 잠시 뒤 다시
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelHealth' }
+  /v1/models/openapi.json:
+    get:
+      summary: 이 서버의 명세(API활용 엔드포인트 탭 원천)
+      security: []
+      responses:
+        '200':
+          description: OpenAPI 문서
+          content:
+            application/json:
+              schema: { type: object }
+
+  # ---- 내부 경로: 127.0.0.1 전용, nginx가 외부로 내보내지 않음 ----
+  /internal/ready:
+    get:
+      summary: 서빙군·런타임 준비 + 모델별 적재 상태 (app-api /ready가 합침, T109)
+      security: []
+      responses:
+        '200':
+          description: 준비 상태
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    type: object
+                    properties:
+                      cpu: { type: boolean }
+                      gpu: { type: boolean }
+                      llm: { type: boolean }
+                  runtimes:
+                    type: object
+                    properties:
+                      torchserve: { type: boolean }
+                      ollama: { type: boolean }
+                  gpuEnabled: { type: boolean }
+                  models:
+                    type: array
+                    items: { $ref: '#/components/schemas/ModelLoadStatus' }
+  /internal/models:
+    get:
+      summary: 모델별 활성 버전·장치·적재 상태 (운영 S11 "모델 상태" 표, app-api `GET /v1/ops/models`가 프록시)
+      security: []
+      responses:
+        '200':
+          description: 모델 상태
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items: { $ref: '#/components/schemas/ModelLoadStatus' }
+                  llm: { type: [object, 'null'], description: 'llm-server `/v1/ready` 원본(llm-contract.md §1)' }
+                  workers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        worker: { type: string }
+                        servingGroup: { type: string, enum: [cpu_vision, gpu] }
+                        alive: { type: boolean }
+  /internal/models/{modelId}/warmup:
+    post:
+      summary: 지금 불러오기 — 워커에 적재 요청 (S11, app-api `POST /v1/ops/models/{id}/warmup`가 프록시)
+      description: 워커에 파일 신호로 적재를 요청하고 그 모델의 현재 상태를 돌려준다. M6는 공유 Ollama 규칙상 llm-server 기동 때 1회만 미리 올리므로 409.
+      security: []
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, enum: [M1, M2, M3, M5, M6, M7] } }
+      responses:
+        '202':
+          description: 적재 요청됨 — 결과는 `/internal/models` 폴링으로
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelLoadStatus' }
+        '404': { description: 'unknown_model (M4 규칙 포함)' }
+        '409':
+          description: 'M6 — code m6_preload_at_start_only'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string, const: m6_preload_at_start_only }
+                  detail: { type: string }
+  /internal/console:
+    get:
+      summary: 운영자용 적재 상태 HTML(127.0.0.1 전용, A 임시 화면). 정식 화면은 S11
+      security: []
+      responses:
+        '200':
+          description: HTML
+          content:
+            text/html:
+              schema: { type: string }
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  responses:
+    Unauthorized:
+      description: 키 없음·무효·폐기(G2). 한도 차감 없음
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ForbiddenScope:
+      description: 기능 권한 없음 — external 키로 pose 등(G2, D17)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: 없는 기능·P0의 caption·3D·받아 간/만료 결과
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PayloadTooLarge:
+      description: 크기 초과(G24)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    InvalidInput:
+      description: 형식 오류·판독 불가·필수 필드 누락·caption에 이미지·이름 포함(G24, U18)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RateLimited:
+      description: 한도 초과(G2)
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ModelNotReady:
+      description: 활성 버전 없음·라이선스 미확인·서빙군 미준비(G25). 작업을 만들지 않음
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    ModelHealth:
+      type: object
+      required: [status, functions]
+      properties:
+        status: { type: string, enum: [ok, loading, error], description: 'ok = 활성 모델이 모두 준비 · loading = 적재 중 · error = 적재 실패·워커 없음·활성 모델 0' }
+        functions:
+          type: object
+          description: 기능별 상태 — ready · loading · error · disabled(활성 버전 없음)
+          additionalProperties: { type: string, enum: [ready, loading, error, disabled] }
+        modelVersions:
+          type: object
+          description: 기능별 모델 버전 라벨(활성 버전, 없으면 null)
+          additionalProperties: { type: [string, 'null'] }
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          type: string
+          enum: [unauthorized, forbidden_scope, not_found, payload_too_large, invalid_input, rate_limited, model_not_ready, timeout, conflict]
+        detail: { type: string, description: 사람이 읽는 안내 한 문장(RFC 9457 detail) — 무엇이 틀렸고 부르는 쪽이 무엇을 하면 되는지 }
+        fields:
+          type: array
+          items:
+            type: object
+            required: [name, reason]
+            properties:
+              name: { type: string, description: 틀린 칸 이름(multipart 칸 image 등) }
+              reason: { type: string, description: 'required · unrecognized · format · too_large …' }
+              message: { type: string, description: 이 칸에 넣어야 할 올바른 값 안내 }
+        requestId: { type: string }
+    ModelLoadStatus:
+      type: object
+      description: 'A 구현 serving/model_api/internal.py models_view() · common/model_state.describe() 기준'
+      required: [modelId, licenseConfirmed, hint]
+      properties:
+        modelId: { type: string, enum: [M1, M2, M3, M5, M6, M7] }
+        activeVersion: { type: [string, 'null'] }
+        execDevice: { type: [string, 'null'], enum: [cpu, gpu, null] }
+        runtime: { type: [string, 'null'] }
+        licenseConfirmed: { type: boolean }
+        workers: { type: integer }
+        load:
+          type: [object, 'null']
+          properties:
+            state:
+              type: string
+              description: 'ready·loading·not_loaded·failed·disabled, M6만 cold(짐작)·unavailable(llm-server 응답 없음)'
+              enum: [ready, loading, not_loaded, failed, disabled, cold, unavailable]
+            device: { type: [string, 'null'] }
+            expectedSeconds: { type: [number, 'null'], description: '매니페스트 load.expected_seconds' }
+            lastLoadSeconds: { type: [number, 'null'] }
+            elapsedSeconds: { type: [number, 'null'] }
+            remainingSeconds: { type: [number, 'null'], description: '짐작. overdue면 null' }
+            overdue: { type: boolean }
+            diagnostic: { type: [string, 'null'] }
+        hint:
+          type: [string, 'null']
+          enum: [model_loading, model_cold, model_failed, model_disabled, null]
+        queue:
+          type: [object, 'null']
+          description: M6만 — llm-server queue
+          properties:
+            inFlight: { type: integer }
+            waiting: { type: integer }
+    ModelRef:
+      type: object
+      required: [id, version]
+      properties:
+        id: { description: '모델 번호(M1 BiRefNet · M2 OpenCLIP · M3 Animated Drawings · M4 기하 규칙 · M5 Depth Anything V2 · M6 Qwen3)', type: string, enum: [M1, M2, M3, M4, M5, M6] }
+        version: { description: '모델 버전 라벨(model_version.version_label)', type: string }
+    ExtJob:
+      type: object
+      required: [jobId, function, status]
+      properties:
+        jobId: { type: string, pattern: '^[0-9]+$', description: 'SD_03 external_job.ext_job_id. 발급한 키로만 조회된다(다른 키는 404)' }
+        function: { description: '기능 — segment(분리) · classify(종류) · pose(관절) · relief(깊이 부조)', type: string, enum: [segment, classify, pose, relief] }
+        status: { description: '작업 상태 — queued(대기) · running(처리 중) · done(끝, /result로 수령) · failed(실패, outcome에 이유)', type: string, enum: [queued, running, done, failed] }
+        outcome:
+          description: 'ok / quality_below / 인프라 5종(engine_down, timeout, storage, db, model_not_ready) — contracts/stage-job.md'
+          type: [string, 'null']
+          enum: [ok, quality_below, engine_down, timeout, storage, db, model_not_ready, null]
+        model: { description: '처리한 모델과 버전(model_version) — 재현·문의용', $ref: '#/components/schemas/ModelRef' }
+        durationMs: { description: '처리 시간(ms). 끝나기 전 null', type: [integer, 'null'] }
+        resultExpiresAt: { description: '결과 보관 만료 시각(UTC, 끝난 뒤 1시간). 지나면 /result 404', type: [string, 'null'], format: date-time }
+    ExtResult:
+      type: object
+      required: [jobId, function, outcome, model]
+      properties:
+        jobId: { type: string, pattern: '^[0-9]+$', description: 'SD_03 external_job.ext_job_id. 발급한 키로만 조회된다(다른 키는 404)' }
+        function: { description: '기능(ExtJob.function과 같음)', type: string }
+        outcome: { description: 'ok(정상) · quality_below(판단보류 — 품질 기준 미달, 사람이 확인하거나 다른 이미지로 다시)', type: string, enum: [ok, quality_below] }
+        model: { description: '처리한 모델과 버전', $ref: '#/components/schemas/ModelRef' }
+        segment:
+          type: object
+          description: 'image/png base64 — 마스크(1ch)와 컷아웃(RGBA)'
+          properties:
+            maskPng: { type: string, contentEncoding: base64 }
+            cutoutPng: { type: string, contentEncoding: base64 }
+        classify:
+          type: object
+          description: '종류와 태그만. 점수·확률 없음'
+          properties:
+            kind: { type: string, enum: [person, animal, house, object] }
+            tags: { type: array, items: { type: string } }
+        pose:
+          description: '관절 좌표(Animated Drawings 골격 16점) — pose 기능일 때만'
+          type: object
+          properties:
+            joints:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  x: { type: number }
+                  y: { type: number }
+            geometryRulePassed: { type: boolean, description: M4 기하 규칙 통과 여부 }
+        relief:
+          description: '깊이 PNG16과 컷아웃(base64) — relief 기능일 때만'
+          type: object
+          properties:
+            cutoutPng: { type: string, contentEncoding: base64 }
+            depthPng16: { type: string, contentEncoding: base64 }

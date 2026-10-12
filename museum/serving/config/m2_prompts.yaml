@@ -1,0 +1,25 @@
+# M2 OpenCLIP 제로샷 프롬프트(R-22). 이 파일은 M2 config_hash에 들어간다.
+kinds:
+  person: "a child's drawing of a person"
+  animal: "a child's drawing of an animal"
+  house:  "a child's drawing of a house"
+  object: "a child's drawing of an object"
+# 태그 후보 고정 어휘(BR-CAP-06: 후보로만). 한국어 레이블 → 영어 프롬프트
+tags:
+  사람: "a person"
+  가족: "a family"
+  강아지: "a dog"
+  고양이: "a cat"
+  새: "a bird"
+  물고기: "a fish"
+  집: "a house"
+  나무: "a tree"
+  꽃: "flowers"
+  해: "the sun"
+  바다: "the sea"
+  하늘: "the sky"
+  자동차: "a car"
+  무지개: "a rainbow"
+  공룡: "a dinosaur"
+tag_top_k: 5
+tag_min_score: 0.05
