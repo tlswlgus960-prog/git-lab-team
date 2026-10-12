@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+<title>찰흙 곰 인형 (견본 그림 — 팀이 코드로 그림)</title>
+<defs><filter id="c" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="20" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+<pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></pattern></defs>
+<g filter="url(#c)" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="200" cy="200" rx="80" ry="75" fill="#C98B5A" stroke="#8A5530" stroke-width="5"/>
+<circle cx="200" cy="105" r="62" fill="#C98B5A" stroke="#8A5530" stroke-width="5"/>
+<circle cx="150" cy="58" r="22" fill="#C98B5A" stroke="#8A5530" stroke-width="5"/><circle cx="250" cy="58" r="22" fill="#C98B5A" stroke="#8A5530" stroke-width="5"/>
+<ellipse cx="200" cy="125" rx="26" ry="18" fill="#E9C29A" stroke="#8A5530" stroke-width="3"/>
+<circle cx="178" cy="95" r="7" fill="#3B2A20"/><circle cx="222" cy="95" r="7" fill="#3B2A20"/><ellipse cx="200" cy="118" rx="8" ry="6" fill="#3B2A20"/>
+<ellipse cx="200" cy="210" rx="45" ry="40" fill="#E9C29A" stroke="#8A5530" stroke-width="3"/>
+<ellipse cx="140" cy="265" rx="30" ry="20" fill="#C98B5A" stroke="#8A5530" stroke-width="5"/><ellipse cx="260" cy="265" rx="30" ry="20" fill="#C98B5A" stroke="#8A5530" stroke-width="5"/>
+</g></svg>

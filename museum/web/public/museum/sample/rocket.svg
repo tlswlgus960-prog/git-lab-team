@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+<title>달나라 가는 로켓 (견본 그림 — 팀이 코드로 그림)</title>
+<defs><filter id="c" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+<pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></pattern></defs>
+<rect width="400" height="300" fill="#FFFDF6"/><g filter="url(#c)" stroke-linecap="round" stroke-linejoin="round">
+<rect width="400" height="300" fill="#2E3A6E"/>
+<path d="M40 34v12M34 40h12" stroke="#FFE066" stroke-width="3"/><path d="M120 84v12M114 90h12" stroke="#FFE066" stroke-width="3"/><path d="M360 24v12M354 30h12" stroke="#FFE066" stroke-width="3"/><path d="M300 114v12M294 120h12" stroke="#FFE066" stroke-width="3"/><path d="M60 194v12M54 200h12" stroke="#FFE066" stroke-width="3"/><path d="M350 224v12M344 230h12" stroke="#FFE066" stroke-width="3"/><path d="M180 24v12M174 30h12" stroke="#FFE066" stroke-width="3"/>
+<circle cx="330" cy="70" r="36" fill="#FFF3BF" stroke="#E6C84A" stroke-width="5"/>
+<path d="M200 60 q40 50 30 150 h-60 q-10 -100 30 -150z" fill="#F1F3F5" stroke="#868E96" stroke-width="5"/>
+<circle cx="200" cy="130" r="16" fill="#74C0FC" stroke="#1C7ED6" stroke-width="5"/>
+<path d="M170 180 l-30 40 l30 -5 M230 180 l30 40 l-30 -5" fill="#FF6B6B" stroke="#C92A2A" stroke-width="5"/>
+<path d="M180 215 q20 60 40 0" fill="#FFA94D" stroke="#F76707" stroke-width="5"/>
+</g></svg>

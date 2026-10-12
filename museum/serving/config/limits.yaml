@@ -1,0 +1,18 @@
+# 시간 상한·동시 처리(stage-job §8, BR-PRC-06·07, BR-SRV-03, U6)
+# [추론] 기본값. 원천 확정값은 animate_render.timeout_s 뿐(BR-PRC-06). 재현 시험 뒤 A가 갱신한다.
+retry:            { max_attempts: 3, backoff_s: [10, 60] }
+claim:            { seconds: 60, heartbeat_s: 20 }
+priority:         { guardian: 10, check: 30, eval: 50 }   # check: D20 점검(app-api가 30으로 등록, stage-job §13)
+poll:             { idle_s: 2 }
+stages:
+  split:          { timeout_s: 60,  concurrency: 1 }   # stage-job §8 — M1 CPU 추론 RSS 8.5GB, 공유 호스트(A_팀서버_자원확인 §3)
+  judge:          { timeout_s: 120, concurrency: 1 }   # stage-job §8
+  animate_render: { timeout_s: 600, concurrency: 1 }
+  depth_relief:   { timeout_s: 180, timeout_s_cpu: 600, concurrency: 1 }
+  frame_compose:  { timeout_s: 10,  concurrency: 4 }
+  sculpture:      { timeout_s: 600, concurrency: 1 }   # P1
+  caption:        { timeout_s: 30,  concurrency: 1 }   # P0.5, llm-server (호출자 상한, llm-contract §1)
+external:         { concurrency_per_group: 1 }         # [예시값 U12]
+# 모델 적재(가중치를 메모리에 올리는 시간)는 작업 시간 상한에 넣지 않는다.
+# 적재가 이 값을 넘으면 적재 실패(failed)로 보고, 대기 작업은 model_not_ready로 재시도된다. [추론]
+load:             { timeout_s: 300 }

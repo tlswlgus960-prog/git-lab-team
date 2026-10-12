@@ -1,0 +1,18 @@
+/* 홈 시안 팔레트(SD_02 §17-3, D26 ⑤ — 2026-09-29 개정: 갈색·베이지 폐기, 스튜디오카일 색 틀). `.paper` 안에서만 쓴다.
+   아이보리 바탕 · 블러시 구획 · 빨강 한 가지 계열. 스타일가이드 토큰(tokens.css)은 바꾸지 않는다.
+   대비: 본문 --paper-ink 아이보리 6.1:1 · 블러시 5.3:1, 보조 --paper-ink-2 5.3:1 · 4.6:1, --paper-accent는 24px 이상 큰 글자·선·문양만. */
+.paper{
+  /* D26 ⑥: 토큰 v2와 같은 값 — 토큰을 따른다 */
+  --paper-bg:var(--color-canvas); --paper-blush:var(--color-surface-soft); --paper-card:var(--color-canvas); --paper-mat:#ffffff;
+  --paper-ink:var(--color-ink); --paper-ink-2:var(--color-primary); --paper-accent:var(--color-accent-magenta); --paper-line:var(--color-accent-magenta);
+  --paper-btn:var(--color-primary); --paper-btn-ink:#ffffff; --paper-tape:rgba(253,228,232,.8);
+  --paper-shadow:rgba(110,53,80,.12);
+  background:var(--paper-bg);color:var(--paper-ink);
+}
+/* 반투명 테이프 — 블러시 */
+.paper-tape{position:absolute;width:88px;height:26px;background:var(--paper-tape);box-shadow:0 1px 2px var(--paper-shadow);
+  -webkit-mask:linear-gradient(90deg,transparent 0 2px,#000 2px calc(100% - 2px),transparent calc(100% - 2px));mask:linear-gradient(90deg,transparent 0 2px,#000 2px calc(100% - 2px),transparent calc(100% - 2px))}
+/* 도장 버튼 — 빨강 바탕 흰 글자(5.4:1) */
+.paper-stamp{display:inline-flex;align-items:center;gap:10px;background:var(--paper-btn);color:var(--paper-btn-ink);border:0;border-radius:999px;
+  padding:12px 22px;font:600 17px/1 var(--font-sans);text-decoration:none;cursor:pointer;box-shadow:0 0 0 2px var(--paper-bg),0 0 0 3px var(--paper-accent)}
+.paper-stamp:hover{background:#8c3c5b}

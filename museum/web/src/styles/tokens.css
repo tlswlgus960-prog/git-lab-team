@@ -1,0 +1,48 @@
+/* 토큰·타이포 역할 — design/style-guide/스타일가이드_우리아이미술관.html 에서 그대로 옮김(T011, R-20, D22). 고칠 때는 스타일가이드를 먼저 고친다. */
+:root{
+  /* colors — v3(D31 ②, 2026-09-30): 연한 동화 색 — 우유빛 · 블러시 · 분홍 구름 · 민트 · 라일락 + 자두빛 로즈 글자. 매뉴얼 §4.1 */
+  --color-primary:#a0496b; --color-on-primary:#fffbf7;
+  --color-ink:#6e3550; --color-canvas:#fffbf7;
+  --color-inverse-canvas:#a0496b; --color-inverse-ink:#fffbf7; --color-on-inverse-soft:#fffbf7;
+  --color-hairline:#ebd5d6; --color-hairline-soft:#f7e9e7; --color-surface-soft:#fdf0ee;
+  --color-block-lime:#fff5d6; --color-block-lilac:#eee6f8; --color-block-cream:#fff6ea;
+  --color-block-pink:#fde4e8; --color-block-mint:#e0f3ef; --color-block-coral:#ffe9df;
+  --color-block-navy:#4a3a63; --color-accent-magenta:#b86a8b;
+  --color-semantic-success:#2e7d4f; --color-overlay-scrim:#2c2238;
+
+  /* type families — figmaSans/figmaMono 대체: Inter(+Pretendard 한글) / JetBrains Mono */
+  --font-sans:"Inter Variable","Inter","Pretendard Variable",Pretendard,"SF Pro Display",system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",Menlo,"Pretendard Variable",monospace;
+
+  /* rounded */
+  --r-xs:2px; --r-sm:6px; --r-md:8px; --r-lg:24px; --r-xl:32px; --r-pill:50px; --r-full:9999px;
+
+  /* spacing */
+  --s-hair:1px; --s-xxs:4px; --s-xs:8px; --s-sm:12px; --s-md:16px; --s-lg:24px; --s-xl:32px; --s-xxl:48px; --s-section:96px;
+
+  /* elevation */
+  --elev-2:0 4px 16px rgba(110,53,80,.07);
+  --elev-3:0 16px 48px rgba(110,53,80,.14);
+
+  --container:1280px;
+  --gutter:var(--s-xxl);
+}
+@media (max-width:768px){ :root{ --gutter:var(--s-md); } }
+
+/* ---------- 타이포 역할 (DESIGN.md typography) ---------- */
+.t-display-xl{font:750 86px/1.00 var(--font-sans);letter-spacing:-1.72px}
+.t-display-lg{font:750 64px/1.10 var(--font-sans);letter-spacing:-.96px}
+.t-headline{font:700 26px/1.35 var(--font-sans);letter-spacing:-.26px}
+.t-subhead{font:340 26px/1.35 var(--font-sans);letter-spacing:-.26px}
+.t-card-title{font:700 24px/1.45 var(--font-sans);letter-spacing:0}
+.t-body-lg{font:330 20px/1.40 var(--font-sans);letter-spacing:-.14px}
+.t-body{font:320 18px/1.45 var(--font-sans);letter-spacing:-.26px}
+.t-body-sm{font:330 16px/1.45 var(--font-sans);letter-spacing:-.14px}
+.t-link{font:480 20px/1.40 var(--font-sans);letter-spacing:-.10px}
+.t-button{font:480 20px/1.40 var(--font-sans);letter-spacing:-.10px}
+.t-eyebrow{font:400 18px/1.30 var(--font-mono);letter-spacing:.54px;text-transform:uppercase}
+.t-caption{font:400 12px/1.00 var(--font-mono);letter-spacing:.60px;text-transform:uppercase}
+@media (max-width:560px){
+  .t-display-xl{font-size:48px;letter-spacing:-.96px;line-height:1.05}
+  .t-display-lg{font-size:40px;letter-spacing:-.6px}
+}

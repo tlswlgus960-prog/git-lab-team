@@ -1,0 +1,7 @@
+# 외부 모델 기능 한도(research R-09) — 모두 [예시값 U12]. 확정되면 이 파일만 바꾼다.
+per_minute: 30          # 키당 분당 기능 호출(segment·classify·pose·relief·caption). 상태·결과 조회는 세지 않는다 [추론]
+per_day: 1000           # 키당 하루 기능 호출
+concurrent: 2           # 키당 진행 중(queued·running) 외부 작업
+max_bytes: 20971520     # 요청당 이미지 1장 20MB (BR-API-04, G24)
+result_ttl_s: 3600      # 결과 보관 1시간(D8) — 지나면 수령 불가, sweeper가 지운다
+llm_timeout_s: 30       # caption 동기 프록시 상한 [추론 U6]

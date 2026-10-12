@@ -1,0 +1,114 @@
+# 모델 매니페스트(BR-MDL-01, research R-22) — 매니페스트에 없는 태그·리비전으로는 실행하지 않는다.
+# 적재 시간(load.expected_seconds)은 화면이 "모델을 불러오는 중(약 N초)"을 보여 주는 데 쓴다.
+# 값은 `python -m ops.models measure <ID> --write`가 실측해 채운다. 손으로 고치지 않는다.
+models:
+  M1:
+    source: ZhengPeng7/BiRefNet
+    revision: e2bf8e4460fc8fa32bba5ea4d94b3233d367b0e4
+    weights_sha256: 9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154
+    config_hash: e02942790580f2bd6855199b09421261f18def00ff7417c13db4b228ac344048
+    runtime: torch-2.4.1-cpu
+    exec_device: cpu
+    license_confirmed: true
+    size_mb: 444
+    load:
+      expected_seconds: 2.0
+      measured_on: Studio-B.local
+      measured_at: '2026-09-28'
+    note: CPU만(MPS에 deform_conv2d 없음). HF 원격 코드 — revision 고정 필수. CPU 추론 중 RSS 8.5GB.
+      라이선스 MIT — U4 팀 확정 2026-09-29(켬)
+    image_digest: sha256:89e72385b60ee5cbe697c15fc9952f5beda234f5cb94ce67bda83576d8165840
+  M2:
+    source: laion/CLIP-ViT-B-32-laion2B-s34B-b79K
+    arch: ViT-B-32
+    pretrained: laion2b_s34b_b79k
+    revision: 1a25a446712ba5ee05982a381eed697ef9b435cf
+    weights_sha256: ac4f8c4b88af6d963118cbf40ad93176d092abbedfcb752601ae1866352656e6
+    config_hash: a99f0ae6049b25fedadb120c179eec0764fdc3bebd44d7547cf8efd5f3b2db18
+    runtime: open_clip-2.26.1-mps
+    exec_device: gpu
+    license_confirmed: true
+    size_mb: 605
+    load:
+      expected_seconds: 3.49
+      measured_on: Studio-B.local
+      measured_at: '2026-09-28'
+    note: 'open_clip_model.safetensors를 직접 읽는다(pickle .bin 쓰지 않음). A2 라이선스 기록 전 비활성(BR-MDL-07)
+      · U4 팀 확정 2026-09-29: 보류(모델 카드 배포 권고, T137 오인율 뒤 재검토) → 같은 날 팀 합의로 보류 해제(이진우
+      전달) — 켬은 활성화가 아니며 평가 통과(G22) 뒤 승격'
+    image_digest: sha256:4e3270416ed437297e470a015a6b3d04a4e793b074e03285c3871495dfaa782c
+  M3:
+    source: facebookresearch/AnimatedDrawings
+    revision: b859684857519c7424da51a0b0862fbd1fd258f4
+    weights_sha256: a739c0670a2d38e9ca0ab71c0e7e174fc55312066347e3d60c80534e86f7f868
+    config_hash: 9175537a9422434713dffa541e57fffdbd8a49c087467c94a83117e07b601112
+    runtime: torchserve-0.12.0-native
+    exec_device: cpu
+    license_confirmed: true
+    size_mb: 702
+    load:
+      expected_seconds: 128.0
+      measured_on: Studio-B.local
+      measured_at: '2026-09-29'
+    note: 'TorchServe 네이티브(T081, R-03): 127.0.0.1:9561~9563, 워커 1개. weights_sha256
+      = SHA-256(검출 .mar 해시 + 줄바꿈 + 자세 .mar 해시 + 줄바꿈)[추론 — 파일 2개를 한 값으로]. image_digest
+      = 실행 환경 다이제스트(conda-m3.lock + requirements-m3.lock + config.properties + .mar
+      해시). load.expected_seconds = TorchServe 기동부터 두 모델 READY까지(수동 실측, ops.models
+      measure는 M3에서 ping만 잼). 보관 처리 엔진 — 내부망 격리(BR-MDL-06) · U4 라이선스 팀 확정 2026-09-29(켬,
+      내부망 격리 조건)'
+    mar_sha256:
+      drawn_humanoid_detector: 1a2654c8c4fc52faeeeb9cb2f12ba7ecd01f01f5aeef7ff6723cd0a18133abfb
+      drawn_humanoid_pose_estimator: 40ebdc69f1727dfe475161ae751fb066013e590f8894fe0016f0b69b336ee42f
+    image_digest: sha256:22e60b5738998cac965a9bb822488bd4d80ee431aff7ed74ff80c0e50f7260fc
+  M5:
+    source: depth-anything/Depth-Anything-V2-Small-hf
+    revision: 5426e4f0f36572d16453bbda7a8389317b1bef99
+    weights_sha256: 3152477ce0d8d6978d76b995120de97cb5b928701fd0f817769f59e249a16b70
+    config_hash: 89c6ee7ac0b7779cef58e4854f175b2f1f5e44a4ef892a312d1557e1d84c4af3
+    runtime: torch-2.4.1-mps
+    exec_device: gpu
+    license_confirmed: true
+    size_mb: 99
+    load:
+      expected_seconds: 1.47
+      measured_on: Studio-B.local
+      measured_at: '2026-09-28'
+    note: MPS(exec_device=gpu, runtime에 mps). 비정사각 입력의 bicubic은 PYTORCH_ENABLE_MPS_FALLBACK로
+      CPU. Apache-2.0 — 팀 확정 기록 뒤 license_confirmed=true · U4 라이선스 팀 확정 2026-09-29(켬,
+      Small만)
+    image_digest: sha256:e69aa1badf3cba93d0afea7ee2bb7b0be3c04f576a04e49cbdd76ad4942dc33a
+  M6:
+    source: Qwen/Qwen3-4B-Instruct-2507
+    ollama_tag: qwen3:4b-instruct-2507-q4_K_M
+    variant: GGUF Q4_K_M (non-thinking)
+    weights_sha256: 85e4a5b7b8ef0e48af0e8658f5aaab9c2324c76c1641493f4d1e25fce54b18b9
+    config_hash: 960a7fe4ce21c29ba03c8a05c9d947363dd8e142bd0d92e6b479bdf3dc966298
+    runtime: ollama-0.34.0-metal
+    exec_device: gpu
+    license_confirmed: false
+    size_mb: 2497
+    load:
+      expected_seconds: 1.07
+      measured_on: Studio-B.local
+      measured_at: '2026-09-28'
+      observed_max_seconds: 13.47
+      note: expected_seconds는 디스크 캐시가 있을 때(num_ctx 8192). 같은 크기 모델의 디스크 첫 읽기 13.47초
+        — 화면은 둘 사이를 안내
+    note: weights_sha256 = `ollama show <tag> --modelfile`의 FROM 블롭 다이제스트(Studio-B
+      공유 Ollama v0.34.0). 공유 서버의 `qwen3:4b`는 Qwen3-4B-Thinking-2507과 같은 블롭(sha256:3e4cb141…)이라
+      생각 모드를 끌 수 없어 쓰지 않는다(2026-09-28 실측, docs/A/A_모델재현기록.md). 라이선스 Apache-2.0(모델
+      카드)이나 팀 확정 기록 전 비활성(U4). expected_seconds는 공유 서버 대기 포함 실측
+    image_digest: sha256:fd15e9b41339cc2fda806ab4b62f8a727087024a2372cc0a981636a063630593
+  M7:
+    source: stabilityai/TripoSR
+    revision: 5b521936b01fbe1890f6f9baed0254ab6351c04a
+    weights_sha256: 429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee
+    config_hash: dee7f6c5de1b84d946566d621f536a53b1fc651f28b647c8fba0965340d3bb1c
+    runtime: tsr-107cefd-torch-2.4.1-mps
+    exec_device: gpu
+    license_confirmed: false
+    size_mb: 1677
+    note: P1. 전용 환경 serving/.venv-m7에서 작업마다 하위 프로세스(m7_run.py, research R-22) — 적재
+      약 3초가 작업마다 든다. 코드 VAST-AI-Research/TripoSR 커밋 107cefdc(고치지 않음), MPS 보완 2건(연산
+      대체·메시 추출 CPU). 합성 컷아웃 1장 10.3초·RSS 3.6GB(2026-09-29 A). 라이선스 MIT이나 팀 확정 전 비활성(U4)
+    image_digest: sha256:d283bfd8d707a082f753af18b22517d7176d7a40824788adc879067cb6e13b20

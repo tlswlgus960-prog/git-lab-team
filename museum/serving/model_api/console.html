@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모델 적재 상태</title>
+<style>
+  :root { --bg:#f7f7f5; --fg:#1d1d1b; --muted:#6b6b66; --card:#fff; --line:#e3e2dd;
+          --ok:#2f7d4f; --wait:#9a6700; --bad:#b3261e; --off:#8a8a84; --bar:#d9d7cf; --fill:#3b6fd8; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161615; --fg:#ecebe6; --muted:#a3a29b; --card:#1f1f1d;
+          --line:#33332f; --ok:#6cc58f; --wait:#e0b54a; --bad:#f08a80; --off:#8a8a84; --bar:#3a3a36; --fill:#7aa2f7; } }
+  * { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--fg);
+    font:15px/1.5 -apple-system, "Apple SD Gothic Neo", Pretendard, sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:24px 16px 48px }
+  h1 { font-size:20px; margin:0 0 4px } p.sub { color:var(--muted); margin:0 0 20px; font-size:13px }
+  .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)) }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px }
+  .row { display:flex; justify-content:space-between; align-items:baseline; gap:8px }
+  .id { font-weight:600 } .ver { color:var(--muted); font-size:12px; word-break:break-all }
+  .badge { font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px; border:1px solid currentColor }
+  .ready{color:var(--ok)} .loading,.not_loaded,.cold{color:var(--wait)} .failed,.unavailable{color:var(--bad)} .disabled{color:var(--off)}
+  .bar { height:6px; background:var(--bar); border-radius:3px; overflow:hidden; margin:10px 0 4px }
+  .bar > i { display:block; height:100%; background:var(--fill); transition:width .5s }
+  .meta { color:var(--muted); font-size:12px; margin-top:6px }
+  button { margin-top:10px; font:inherit; font-size:13px; padding:6px 12px; border-radius:6px;
+           border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer }
+  button:disabled { opacity:.5; cursor:default }
+  .note { margin-top:20px; font-size:13px; color:var(--muted) }
+  code { font-size:12px }
+</style>
+</head>
+<body>
+<main>
+  <h1>모델 적재 상태</h1>
+  <p class="sub">model-api 내부 콘솔(127.0.0.1 전용) · 2초마다 새로 고침 · <span id="ts">—</span></p>
+  <div class="grid" id="grid"></div>
+  <p class="note">
+    적재 중에는 그 모델이 필요한 작업이 큐에서 기다립니다(오류 아님). 실패하면 대기 작업은 <code>model_not_ready</code>로 10초·60초 뒤 재시도합니다.
+    M6는 공유 Ollama가 5분 동안 요청이 없으면 내리므로, 그다음 첫 요청이 적재 시간을 다시 기다립니다.
+    공유 서버 규칙(docs/참고/Ollama 유저 가이드.md)상 M6는 수동으로 올리지 않고, 상주 여부는 서버에 묻지 않고 마지막 응답 시각으로 짐작합니다.
+    새 모델 준비·적재 시간 측정: <code>python -m ops.models prepare|measure &lt;ID&gt; --write</code>
+  </p>
+</main>
+<script>
+const LABEL = { ready:"준비됨", loading:"불러오는 중", not_loaded:"아직 안 올림", cold:"내려가 있음",
+                failed:"적재 실패", disabled:"비활성", unavailable:"런타임 없음" };
+const NAME = { M1:"배경 분리 (BiRefNet)", M2:"종류·태그 (OpenCLIP)", M3:"관절·렌더 (Animated Drawings)",
+               M5:"2.5D 깊이 (Depth Anything V2 S)", M6:"작품 설명 (Qwen3-4B)", M7:"3D 조각 (TripoSR)" };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function card(m) {
+  const l = m.load || {}; const st = l.state || "disabled";
+  let bar = "", meta = [];
+  if (st === "loading") {
+    const exp = l.expectedSeconds || l.lastLoadSeconds;
+    const pct = l.overdue ? 95 : exp ? Math.min(95, 100 * (l.elapsedSeconds || 0) / exp) : 30;
+    bar = `<div class="bar"><i style="width:${pct}%"></i></div>`;
+    meta.push(`경과 ${l.elapsedSeconds ?? 0}초` + (l.overdue ? " · 예상보다 오래 걸리고 있어요" :
+              l.remainingSeconds != null ? ` · 남은 시간 약 ${l.remainingSeconds}초` : " · 예상 시간 미측정"));
+  }
+  if (l.lastLoadSeconds != null) meta.push(`마지막 적재 ${l.lastLoadSeconds}초`);
+  if (l.expectedSeconds != null) meta.push(`예상 ${l.expectedSeconds}초`);
+  if (l.loadedUntil) meta.push(`내려갈 시각(짐작) ${new Date(l.loadedUntil).toLocaleTimeString("ko-KR")}`);
+  if (l.contextLength) meta.push(`ctx ${l.contextLength}`);
+  if (l.maxObservedLoadSeconds) meta.push(`최대 관측 ${l.maxObservedLoadSeconds}초`);
+  if (m.queue && (m.queue.inFlight || m.queue.waiting)) meta.push(`처리 중 ${m.queue.inFlight ? 1 : 0} · 대기 ${m.queue.waiting}`);
+  if (l.device) meta.push(`장치 ${l.device}`);
+  // M6는 공유 Ollama 규칙상 기동 때 1회만 미리 올린다 — 수동 버튼 없음
+  const canWarm = m.modelId !== "M6" && ["not_loaded","failed"].includes(st);
+  return `<div class="card">
+    <div class="row"><span class="id">${m.modelId} · ${esc(NAME[m.modelId])}</span><span class="badge ${st}">${LABEL[st] || st}</span></div>
+    <div class="ver">${m.activeVersion ? esc(m.activeVersion) : "활성 버전 없음"}${m.execDevice ? " · " + m.execDevice : ""}</div>
+    ${bar}<div class="meta">${meta.map(esc).join(" · ") || "&nbsp;"}</div>
+    <button data-id="${m.modelId}" ${canWarm ? "" : "disabled"}>지금 불러오기</button></div>`;
+}
+async function refresh() {
+  try {
+    const r = await fetch("/internal/models"); const d = await r.json();
+    document.getElementById("grid").innerHTML = d.models.map(card).join("");
+    document.getElementById("ts").textContent = new Date().toLocaleTimeString("ko-KR");
+  } catch { document.getElementById("ts").textContent = "model-api 응답 없음"; }
+}
+document.addEventListener("click", async e => {
+  const id = e.target?.dataset?.id; if (!id) return;
+  e.target.disabled = true;
+  await fetch(`/internal/models/${id}/warmup`, { method: "POST" }); refresh();
+});
+refresh(); setInterval(refresh, 2000);
+</script>
+</body>
+</html>

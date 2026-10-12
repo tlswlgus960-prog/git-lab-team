@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+<title>해님 아래 우리 집 (견본 그림 — 팀이 코드로 그림)</title>
+<defs><filter id="c" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+<pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></pattern></defs>
+<rect width="400" height="300" fill="#FFFDF6"/><g filter="url(#c)" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="330" cy="60" r="34" fill="#FFC93C" stroke="#F29E1F" stroke-width="5"/>
+<path d="M330 12v-8M378 60h10M364 26l8-8M364 94l8 8M296 26l-8-8" stroke="#F29E1F" stroke-width="5"/>
+<path d="M0 250 Q200 230 400 250 V300 H0Z" fill="#9ED98C" stroke="#5DB35A" stroke-width="5"/>
+<rect x="110" y="140" width="150" height="110" fill="#FF9E80" stroke="#D9614A" stroke-width="5"/>
+<path d="M95 145 L185 75 L275 145Z" fill="#B85C4A" stroke="#8A3B2E" stroke-width="5"/>
+<rect x="165" y="190" width="40" height="60" fill="#8A5A3C" stroke="#5E3A24" stroke-width="5"/>
+<rect x="125" y="165" width="30" height="30" fill="#BFE6FF" stroke="#3E7FB5" stroke-width="5"/><rect x="215" y="165" width="30" height="30" fill="#BFE6FF" stroke="#3E7FB5" stroke-width="5"/>
+</g></svg>

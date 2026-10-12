@@ -1,0 +1,18 @@
+{
+  "name": "our-child-art-museum",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.18.0" },
+  "scripts": {
+    "init": "node ops/local.mjs init",
+    "dev:web": "node ops/local.mjs web",
+    "dev:api": "node ops/local.mjs api",
+    "dev:model": "node ops/local.mjs model",
+    "dev:worker": "node ops/local.mjs worker",
+    "dev:gpu": "node ops/local.mjs gpu",
+    "dev:sweeper": "node ops/local.mjs sweeper",
+    "dev:llm": "node ops/local.mjs llm",
+    "db:migrate": "node ops/local.mjs migrate",
+    "test": "node --test ops/local.test.mjs"
+  }
+}

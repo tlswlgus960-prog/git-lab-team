@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 아이 미술관 스타일가이드</title>
+<meta name="description" content="Figma 디자인 언어(getdesign figma DESIGN.md)를 바탕으로 한 우리 아이 미술관 UI 스타일가이드. 토큰, 타이포그래피, 컴포넌트, 적용 예시를 담는다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+/* =========================================================
+   토큰 — design/style-guide/DESIGN.md (getdesign figma) 값 그대로
+   ========================================================= */
+:root{
+  /* colors — v3(D31 ②, 2026-09-30): 연한 동화 색 — 우유빛 · 블러시 · 분홍 구름 · 민트 · 라일락 + 자두빛 로즈 글자. 매뉴얼 §4.1 */
+  --color-primary:#a0496b; --color-on-primary:#fffbf7;
+  --color-ink:#6e3550; --color-canvas:#fffbf7;
+  --color-inverse-canvas:#a0496b; --color-inverse-ink:#fffbf7; --color-on-inverse-soft:#fffbf7;
+  --color-hairline:#ebd5d6; --color-hairline-soft:#f7e9e7; --color-surface-soft:#fdf0ee;
+  --color-block-lime:#fff5d6; --color-block-lilac:#eee6f8; --color-block-cream:#fff6ea;
+  --color-block-pink:#fde4e8; --color-block-mint:#e0f3ef; --color-block-coral:#ffe9df;
+  --color-block-navy:#4a3a63; --color-accent-magenta:#b86a8b;
+  --color-semantic-success:#2e7d4f; --color-overlay-scrim:#2c2238;
+
+  /* type families — figmaSans/figmaMono 대체: Inter(+Pretendard 한글) / JetBrains Mono */
+  --font-sans:"Inter","Pretendard Variable",Pretendard,"SF Pro Display",system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",Menlo,"Pretendard Variable",monospace;
+
+  /* rounded */
+  --r-xs:2px; --r-sm:6px; --r-md:8px; --r-lg:24px; --r-xl:32px; --r-pill:50px; --r-full:9999px;
+
+  /* spacing */
+  --s-hair:1px; --s-xxs:4px; --s-xs:8px; --s-sm:12px; --s-md:16px; --s-lg:24px; --s-xl:32px; --s-xxl:48px; --s-section:96px;
+
+  /* elevation */
+  --elev-2:0 4px 16px rgba(110,53,80,.07);
+  --elev-3:0 16px 48px rgba(110,53,80,.14);
+
+  --container:1280px;
+  --gutter:var(--s-xxl);
+}
+@media (max-width:768px){ :root{ --gutter:var(--s-md); } }
+
+/* ---------- 타이포 역할 (DESIGN.md typography) ---------- */
+.t-display-xl{font:750 86px/1.00 var(--font-sans);letter-spacing:-1.72px}
+.t-display-lg{font:750 64px/1.10 var(--font-sans);letter-spacing:-.96px}
+.t-headline{font:700 26px/1.35 var(--font-sans);letter-spacing:-.26px}
+.t-subhead{font:340 26px/1.35 var(--font-sans);letter-spacing:-.26px}
+.t-card-title{font:700 24px/1.45 var(--font-sans);letter-spacing:0}
+.t-body-lg{font:330 20px/1.40 var(--font-sans);letter-spacing:-.14px}
+.t-body{font:320 18px/1.45 var(--font-sans);letter-spacing:-.26px}
+.t-body-sm{font:330 16px/1.45 var(--font-sans);letter-spacing:-.14px}
+.t-link{font:480 20px/1.40 var(--font-sans);letter-spacing:-.10px}
+.t-button{font:480 20px/1.40 var(--font-sans);letter-spacing:-.10px}
+.t-eyebrow{font:400 18px/1.30 var(--font-mono);letter-spacing:.54px;text-transform:uppercase}
+.t-caption{font:400 12px/1.00 var(--font-mono);letter-spacing:.60px;text-transform:uppercase}
+@media (max-width:560px){
+  .t-display-xl{font-size:48px;letter-spacing:-.96px;line-height:1.05}
+  .t-display-lg{font-size:40px;letter-spacing:-.6px}
+}
+
+/* ---------- 기본 ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-canvas);color:var(--color-ink);font:320 18px/1.45 var(--font-sans);letter-spacing:-.26px;font-feature-settings:"kern";overflow-x:hidden}
+a{color:inherit}
+code,kbd{font:400 .85em/1.4 var(--font-mono);background:var(--color-surface-soft);padding:1px 6px;border-radius:var(--r-sm);letter-spacing:0}
+.container{max-width:var(--container);margin:0 auto;padding:0 var(--gutter)}
+section.block{margin:var(--s-section) auto}
+h2,h3,h4{margin:0}
+p{margin:0}
+.stack>*+*{margin-top:var(--s-md)}
+.grid{display:grid;gap:var(--s-lg)}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:960px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.sec-head{display:grid;gap:var(--s-sm);margin-bottom:var(--s-xl)}
+.note{border-left:2px solid var(--color-ink);padding:var(--s-xs) var(--s-md);background:var(--color-surface-soft);border-radius:0 var(--r-md) var(--r-md) 0}
+.tag-proposal{display:inline-block;border:1px solid var(--color-ink);border-radius:var(--r-pill);padding:4px 10px}
+:focus-visible{outline:2px solid var(--color-ink);outline-offset:3px}
+
+/* ---------- 컴포넌트 ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;min-height:44px;border-radius:var(--r-pill);font:480 20px/1.40 var(--font-sans);letter-spacing:-.10px;text-decoration:none;transition:transform .12s ease}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--color-primary);color:var(--color-on-primary);padding:10px 20px}
+.btn-secondary{background:var(--color-canvas);color:var(--color-ink);padding:8px 18px 10px;box-shadow:inset 0 0 0 1px var(--color-accent-magenta)}
+.on-soft .btn-secondary{background:var(--color-canvas)}
+.btn-tertiary{background:var(--color-canvas);color:var(--color-ink);padding:8px 12px;border-radius:var(--r-full);font-weight:480}
+.btn-tertiary:hover{text-decoration:underline;text-underline-offset:4px}
+.btn-magenta{background:var(--color-accent-magenta);color:var(--color-on-primary);padding:10px 18px}
+.btn-icon{width:40px;height:40px;min-height:40px;padding:0;border-radius:var(--r-full);background:var(--color-surface-soft);color:var(--color-ink);font-size:20px}
+.btn-icon-inverse{background:rgba(255,255,255,.16);color:var(--color-inverse-ink)}
+@media (pointer:coarse){.btn-icon{width:44px;height:44px}}
+@media (max-width:560px){.btn-block-m{width:100%}}
+
+.tabs{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--color-hairline);border-radius:var(--r-pill);background:var(--color-canvas);max-width:100%;overflow-x:auto}
+.tab{border:0;background:var(--color-canvas);color:var(--color-ink);padding:8px 18px;border-radius:var(--r-pill);font:480 18px/1.4 var(--font-sans);cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--color-primary);color:var(--color-on-primary)}
+
+.field{display:grid;gap:var(--s-xs)}
+.field label{font:330 20px/1.40 var(--font-sans);letter-spacing:-.14px}
+.input{width:100%;background:var(--color-canvas);color:var(--color-ink);font:320 18px/1.45 var(--font-sans);letter-spacing:-.26px;padding:12px 14px;min-height:48px;border:1px solid var(--color-hairline);border-radius:var(--r-md)}
+.input:focus{outline:none;box-shadow:0 0 0 2px var(--color-ink)}
+.input.is-focus{box-shadow:0 0 0 2px var(--color-ink)}
+.input.proposal-border{border-color:#8a8a8a}
+.input.is-error{border-color:var(--color-ink);box-shadow:0 0 0 2px var(--color-ink)}
+.field .hint{font:330 16px/1.45 var(--font-sans)}
+
+.card{background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--r-lg);padding:var(--s-lg)}
+.tile{background:var(--color-surface-soft);border-radius:var(--r-md);padding:var(--s-md)}
+.tile-lg{background:var(--color-surface-soft);border-radius:var(--r-md);padding:var(--s-lg)}
+.row{display:flex;justify-content:space-between;gap:var(--s-md);padding:var(--s-sm) 0;border-bottom:1px solid var(--color-hairline-soft);font:330 16px/1.45 var(--font-sans)}
+.check{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:var(--r-full);color:var(--color-semantic-success);font-size:14px;font-weight:700}
+
+.cb{border-radius:var(--r-lg);padding:var(--s-xxl);color:var(--color-ink)}
+.cb-lime{background:var(--color-block-lime)} .cb-lilac{background:var(--color-block-lilac)}
+.cb-cream{background:var(--color-block-cream)} .cb-mint{background:var(--color-block-mint)}
+.cb-pink{background:var(--color-block-pink)} .cb-coral{background:var(--color-block-coral)}
+.cb-navy{background:var(--color-block-navy);color:var(--color-inverse-ink)}
+.cb .inner{max-width:760px}
+@media (max-width:768px){ .cb.full-bleed-m{border-radius:0;margin-left:calc(var(--gutter) * -1);margin-right:calc(var(--gutter) * -1);padding:var(--s-xl) var(--gutter)} }
+
+.promo{display:flex;align-items:center;justify-content:space-between;gap:var(--s-md);flex-wrap:wrap;background:var(--color-block-lilac);border-radius:var(--r-md);padding:var(--s-md) var(--s-lg);font:330 16px/1.45 var(--font-sans)}
+
+/* top nav + marquee */
+.topnav{position:sticky;top:0;z-index:10;background:var(--color-canvas);height:56px;border-bottom:1px solid var(--color-hairline-soft)}
+.topnav .container{height:100%;display:flex;align-items:center;justify-content:space-between;gap:var(--s-md)}
+.wordmark{font:540 20px/1 var(--font-sans);letter-spacing:-.4px;text-decoration:none;white-space:nowrap}
+.navlinks{display:flex;gap:4px;align-items:center}
+.navlinks a{font:330 16px/1.45 var(--font-sans);text-decoration:none;padding:8px 10px;border-radius:var(--r-full)}
+.navlinks a:hover{background:var(--color-surface-soft)}
+.nav-cta{display:flex;gap:8px;align-items:center}
+.nav-cta .btn{font-size:16px;min-height:40px;padding:6px 16px}
+@media (max-width:960px){.navlinks{display:none}}
+@media (max-width:560px){.nav-cta .btn-secondary{display:none}}
+.marquee{background:var(--color-inverse-canvas);color:var(--color-inverse-ink);height:36px;overflow:hidden;display:flex;align-items:center;font:330 16px/1.45 var(--font-sans)}
+.marquee-track{display:flex;gap:var(--s-xxl);white-space:nowrap;animation:mq 40s linear infinite;padding-left:var(--s-lg)}
+@keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.marquee-track{animation:none}}
+
+/* swatches */
+.swatch{border-radius:var(--r-md);overflow:hidden;border:1px solid var(--color-hairline)}
+.swatch .chip{height:96px;display:flex;align-items:flex-end;padding:var(--s-sm)}
+.swatch .meta{padding:var(--s-sm);display:grid;gap:4px;font:330 16px/1.45 var(--font-sans)}
+.swatch .meta b{font-weight:540}
+
+/* type specimen */
+.spec{display:grid;grid-template-columns:220px 1fr;gap:var(--s-lg);padding:var(--s-lg) 0;border-top:1px solid var(--color-hairline-soft);align-items:baseline}
+.spec .sample{overflow-wrap:anywhere}
+@media (max-width:768px){.spec{grid-template-columns:1fr;gap:var(--s-xs)}}
+
+/* scales */
+.bar{height:16px;background:var(--color-ink);border-radius:var(--r-xs)}
+.scale-row{display:grid;grid-template-columns:120px 64px 1fr;gap:var(--s-md);align-items:center;padding:6px 0;font:330 16px/1.45 var(--font-sans)}
+.rad{height:88px;background:var(--color-surface-soft);border:1px solid var(--color-hairline);display:flex;align-items:flex-end;padding:var(--s-sm)}
+
+/* do / don't */
+.dd{display:grid;gap:var(--s-sm)}
+.dd li{margin-left:1.1em}
+
+table.plain{width:100%;border-collapse:collapse;font:330 16px/1.45 var(--font-sans)}
+table.plain th,table.plain td{text-align:left;padding:var(--s-sm) var(--s-sm) var(--s-sm) 0;border-bottom:1px solid var(--color-hairline-soft);vertical-align:top}
+table.plain th{font:400 12px/1 var(--font-mono);letter-spacing:.6px;text-transform:uppercase}
+.table-wrap{overflow-x:auto}
+
+/* ---------- 적용 예시 (우리 아이 미술관) ---------- */
+.art{background:var(--color-surface-soft);border-radius:var(--r-md);padding:var(--s-md);display:grid;gap:var(--s-sm)}
+.art figure{margin:0;aspect-ratio:4/3;border-radius:var(--r-md);background:var(--color-canvas);display:grid;place-items:center;overflow:hidden}
+.art figure svg{width:78%;height:78%}
+.art .title{font:700 20px/1.35 var(--font-sans)}
+.art .words{font:330 16px/1.45 var(--font-sans)}
+.age-head{display:flex;align-items:baseline;gap:var(--s-md);margin:var(--s-xl) 0 var(--s-md)}
+.status{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--color-ink);border-radius:var(--r-pill);padding:6px 12px;font:400 12px/1 var(--font-mono);letter-spacing:.6px;text-transform:uppercase;background:var(--color-canvas)}
+.status .dot{width:8px;height:8px;border-radius:var(--r-full);background:var(--color-ink)}
+.status.is-quiet{border-color:var(--color-hairline)}
+.status.is-quiet .dot{background:transparent;border:1px solid var(--color-ink)}
+.suggest{display:flex;gap:var(--s-sm);flex-wrap:wrap}
+.chip-opt{border:1px solid var(--color-hairline);background:var(--color-canvas);border-radius:var(--r-pill);padding:10px 18px;font:480 18px/1.4 var(--font-sans);cursor:pointer;min-height:44px}
+.chip-opt[aria-pressed="true"]{background:var(--color-primary);color:var(--color-on-primary);border-color:var(--color-primary)}
+.chip-opt .sub{font:400 12px/1 var(--font-mono);letter-spacing:.6px;text-transform:uppercase;margin-left:8px}
+.ai-mark{display:inline-block;font:400 12px/1 var(--font-mono);letter-spacing:.6px;text-transform:uppercase;border:1px solid var(--color-ink);border-radius:var(--r-sm);padding:4px 6px}
+.quote{font:330 20px/1.40 var(--font-sans);letter-spacing:-.14px}
+
+footer.site{background:var(--color-canvas);padding:var(--s-section) 0 var(--s-xxl);border-top:1px solid var(--color-hairline-soft);margin-top:var(--s-section)}
+footer.site .cols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s-lg)}
+footer.site ul{list-style:none;margin:var(--s-md) 0 0;padding:0;display:grid;gap:6px;font:330 16px/1.45 var(--font-sans)}
+@media (max-width:960px){footer.site .cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:559px){footer.site .cols{grid-template-columns:1fr}}
+
+/* ---------- 상태 컴포넌트 C1·C2·C3·C10 (SD_02 §3-5 · D22 시안) ---------- */
+.rail{display:flex;flex-wrap:wrap;gap:6px;align-items:center;list-style:none;margin:0;padding:0}
+.rail li{border:1px solid var(--color-hairline);border-radius:var(--r-pill);padding:6px 12px;font:330 16px/1.2 var(--font-sans);background:var(--color-canvas)}
+.rail li.is-now{background:var(--color-inverse-canvas);color:var(--color-inverse-ink);border-color:var(--color-inverse-canvas);font-weight:540}
+.rail li.is-blocked{border:2px solid var(--color-ink);font-weight:540}
+.rail li .gate{font:400 12px/1 var(--font-mono);letter-spacing:.6px;margin-left:6px}
+.gblock{border-radius:var(--r-md);padding:var(--s-md);display:grid;gap:6px;font:330 16px/1.45 var(--font-sans)}
+.gblock .head{font:540 18px/1.35 var(--font-sans)}
+.gblock .head .gate{font:400 12px/1 var(--font-mono);letter-spacing:.6px;margin-left:8px}
+.gblock dl{display:grid;grid-template-columns:auto 1fr;gap:4px var(--s-sm);margin:0}
+.gblock dt{font-weight:540} .gblock dd{margin:0}
+.gblock .acts{display:flex;gap:var(--s-sm);flex-wrap:wrap;margin-top:6px}
+.gblock.is-block{border:2px solid var(--color-ink);background:var(--color-canvas)}
+.gblock.is-hold{border:2px dashed var(--color-ink);background:var(--color-block-cream)}
+.gblock.is-final{border:1px solid var(--color-hairline);background:var(--color-surface-soft)}
+.downgrade{border-radius:var(--r-md);padding:var(--s-md);background:var(--color-block-lilac);font:330 16px/1.45 var(--font-sans)}
+.btn[aria-disabled="true"]{background:var(--color-hairline-soft);color:var(--color-ink);cursor:not-allowed}
+.btn[aria-disabled="true"] .why{font:330 14px/1.3 var(--font-sans);margin-left:6px}
+.mchip{display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-pill);padding:6px 12px;font:400 12px/1 var(--font-mono);letter-spacing:.6px;border:1px solid transparent;min-height:28px}
+.mchip.ready{background:var(--color-inverse-canvas);color:var(--color-inverse-ink)}
+.mchip.not-ready,.mchip.cold{border-color:var(--color-ink);background:var(--color-canvas)}
+.mchip.loading{border-color:var(--color-ink);background:var(--color-canvas)}
+.mchip.loading .bar{display:inline-block;width:48px;height:6px;border-radius:var(--r-xs);background:linear-gradient(90deg,var(--color-block-mint) 60%,var(--color-hairline-soft) 60%)}
+.mchip.failed{border:2px solid var(--color-ink);background:var(--color-canvas)}
+.mchip.inactive{border-color:var(--color-hairline);background:repeating-linear-gradient(135deg,var(--color-canvas) 0 6px,var(--color-hairline) 6px 8px)}
+.mchip.cpu{background:var(--color-block-mint)}
+.mchip.hidden{border:1px dashed var(--color-hairline);background:var(--color-canvas)}
+.mchip.unknown{background:var(--color-hairline-soft);border-color:var(--color-hairline)}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--s-xl)}
+.toc a{text-decoration:none}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+
+<!-- ============ top-nav ============ -->
+<header class="topnav" role="banner">
+  <div class="container">
+    <a class="wordmark" href="#top">우리 아이 미술관</a>
+    <nav class="navlinks" aria-label="스타일가이드 목차">
+      <a href="#principles">원칙</a><a href="#colors">색</a><a href="#type">타이포</a>
+      <a href="#layout">레이아웃</a><a href="#components">컴포넌트</a><a href="#patterns">적용 예시</a><a href="#states">상태 컴포넌트</a><a href="#rules">해야 할 것</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-secondary" href="#patterns">가족 전시 보기</a>
+      <a class="btn btn-primary" href="#components">작품 올리기</a>
+    </div>
+  </div>
+</header>
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>흑백 프레임 · 작품이 주인공</span><span>한 화면에 컬러 블록은 하나</span><span>버튼은 모두 알약 모양</span><span>크기보다 굵기로 위계</span><span>모노체는 분류 라벨에만</span><span>그림자 대신 색 면</span>
+    <span>흑백 프레임 · 작품이 주인공</span><span>한 화면에 컬러 블록은 하나</span><span>버튼은 모두 알약 모양</span><span>크기보다 굵기로 위계</span><span>모노체는 분류 라벨에만</span><span>그림자 대신 색 면</span>
+  </div>
+</div>
+
+<main id="top">
+<!-- ============ hero ============ -->
+<section class="container block" style="margin-top:var(--s-xxl)">
+  <p class="t-eyebrow">Style Guide · v0.1 · 2026-09-28</p>
+  <h1 class="t-display-xl" style="margin:var(--s-md) 0 var(--s-lg)">우리 아이 미술관<br>스타일가이드</h1>
+  <p class="t-subhead" style="max-width:900px">흑백의 깨끗한 액자 위에 파스텔 색 면을 한 장씩 붙이는 디자인 언어다. 화면의 주인공은 아이의 작품이고, 인터페이스는 그 작품을 걸어 두는 벽이 된다.</p>
+  <div class="note t-body-sm" style="margin-top:var(--s-xl);max-width:900px">
+    기준: <code>design/style-guide/DESIGN.md</code> — <code>npx getdesign@latest add figma</code>로 받은 Figma 디자인 분석(alpha). 토큰 값은 원문 그대로 쓴다. 우리 아이 미술관 화면에 맞춘 부분은 <span class="tag-proposal t-caption">적용 예시 — 제안</span> 으로 따로 표시한다. 사용법은 <code>스타일가이드_메뉴얼_우리아이미술관.md</code>를 본다.
+  </div>
+  <nav class="toc" aria-label="바로가기">
+    <a class="btn btn-primary" href="#colors">토큰부터 보기</a>
+    <a class="btn btn-secondary" href="#patterns">적용 예시 보기</a>
+  </nav>
+</section>
+
+<!-- ============ principles (lime block) ============ -->
+<section class="container block" id="principles">
+  <div class="cb cb-lime full-bleed-m">
+    <div class="inner stack">
+      <p class="t-eyebrow">01 · 원칙</p>
+      <h2 class="t-display-lg">작품이 먼저 보이게</h2>
+      <p class="t-subhead">Figma 디자인 언어의 여섯 가지 규칙을 우리 서비스의 약속과 한 줄씩 짝지었다.</p>
+    </div>
+    <div class="grid g2" style="margin-top:var(--s-xl)">
+      <div class="stack"><h3 class="t-headline">흑백 프레임</h3><p class="t-body">내비게이션, 본문, 버튼은 검정과 흰색만 쓴다. 색은 아이의 작품에서 나오게 둔다.</p></div>
+      <div class="stack"><h3 class="t-headline">컬러 블록 = 이야기 구간</h3><p class="t-body">색 면은 장식이 아니라 구간 표시다. 한 화면에 하나만 두고, 사이에는 흰 여백을 둔다.</p></div>
+      <div class="stack"><h3 class="t-headline">알약 버튼</h3><p class="t-body">글자 버튼은 모두 알약, 아이콘 버튼은 모두 원이다. 네모 버튼은 없다.</p></div>
+      <div class="stack"><h3 class="t-headline">굵기로 위계</h3><p class="t-body">회색 글자를 쓰지 않는다. 같은 크기에서 굵기(320 → 480 → 540)로 강조한다.</p></div>
+      <div class="stack"><h3 class="t-headline">모노체는 분류에만</h3><p class="t-body">상태, 연령 묶음, 날짜 같은 분류 라벨에만 모노체 대문자를 쓴다. 문장은 쓰지 않는다.</p></div>
+      <div class="stack"><h3 class="t-headline">그림자 대신 색 면</h3><p class="t-body">강조는 그림자가 아니라 배경 색 면으로 한다. 그림자는 떠 있는 메뉴와 모달에만 쓴다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ colors ============ -->
+<section class="container block" id="colors">
+  <div class="sec-head">
+    <p class="t-eyebrow">02 · 색</p>
+    <h2 class="t-display-lg">색 토큰 20개</h2>
+    <p class="t-body-lg" style="max-width:820px">대비 값은 WCAG 2.1 기준으로 계산했다. 검정 글자는 모든 파스텔 블록에서 AA를 넉넉히 넘는다.</p>
+  </div>
+  <h3 class="t-card-title" style="margin-bottom:var(--s-md)">브랜드 · 글자</h3>
+  <div class="grid g4" id="sw-brand"></div>
+  <h3 class="t-card-title" style="margin:var(--s-xl) 0 var(--s-md)">표면</h3>
+  <div class="grid g4" id="sw-surface"></div>
+  <h3 class="t-card-title" style="margin:var(--s-xl) 0 var(--s-md)">컬러 블록</h3>
+  <div class="grid g4" id="sw-block"></div>
+  <h3 class="t-card-title" style="margin:var(--s-xl) 0 var(--s-md)">강조 · 의미</h3>
+  <div class="grid g4" id="sw-accent"></div>
+  <div class="note t-body-sm" style="margin-top:var(--s-xl)">
+    주의 — 흰 글자 + 마젠타는 3.34:1이라 본문(4.5:1)에는 못 쓰고 20px 이상 버튼 글자에만 쓴다. 성공 초록(3.18:1)은 글자가 아닌 체크 아이콘에만 쓴다. 헤어라인(1.25:1)은 입력칸 경계로는 약하므로 입력칸은 초점 링으로 상태를 보완한다(메뉴얼 §4.3 제안).
+  </div>
+</section>
+
+<!-- ============ typography ============ -->
+<section class="container block" id="type">
+  <div class="sec-head">
+    <p class="t-eyebrow">03 · 타이포그래피</p>
+    <h2 class="t-display-lg">한 목소리, 여러 굵기</h2>
+    <p class="t-body-lg" style="max-width:820px">figmaSans와 figmaMono는 공개 서체가 아니라서 DESIGN.md가 권하는 대체 서체를 쓴다. 영문·숫자는 Inter, 한글은 Pretendard, 라벨은 JetBrains Mono다.</p>
+  </div>
+  <div id="type-specs"></div>
+</section>
+
+<!-- ============ layout ============ -->
+<section class="container block" id="layout">
+  <div class="sec-head">
+    <p class="t-eyebrow">04 · 레이아웃</p>
+    <h2 class="t-display-lg">간격 · 모서리 · 깊이</h2>
+  </div>
+  <div class="grid g2">
+    <div>
+      <h3 class="t-card-title" style="margin-bottom:var(--s-md)">간격 (기준 8px)</h3>
+      <div id="spacing"></div>
+    </div>
+    <div>
+      <h3 class="t-card-title" style="margin-bottom:var(--s-md)">깊이 단계</h3>
+      <div class="grid" style="gap:var(--s-md)">
+        <div class="tile-lg"><p class="t-caption">Level 0 · flat</p><p class="t-body-sm" style="margin-top:8px">그림자·테두리 없음. 컬러 블록, 히어로, 푸터</p></div>
+        <div class="card" style="border-radius:var(--r-md)"><p class="t-caption">Level 1 · hairline</p><p class="t-body-sm" style="margin-top:8px">1px 헤어라인. 카드, 입력칸, 표</p></div>
+        <div class="card" style="border-radius:var(--r-md);box-shadow:var(--elev-2);border-color:transparent"><p class="t-caption">Level 2 · soft</p><p class="t-body-sm" style="margin-top:8px">0 4px 16px rgba(0,0,0,.06). 떠 있는 메뉴</p></div>
+        <div class="card" style="border-radius:var(--r-md);box-shadow:var(--elev-3);border-color:transparent"><p class="t-caption">Level 3 · modal</p><p class="t-body-sm" style="margin-top:8px">강한 그림자 + 60% 검정 스크림. 작품 크게 보기</p></div>
+      </div>
+    </div>
+  </div>
+  <h3 class="t-card-title" style="margin:var(--s-xxl) 0 var(--s-md)">모서리 반경</h3>
+  <div class="grid g4" id="radii"></div>
+  <h3 class="t-card-title" style="margin:var(--s-xxl) 0 var(--s-md)">반응형 구간</h3>
+  <div class="table-wrap">
+  <table class="plain">
+    <thead><tr><th>이름</th><th>너비</th><th>바뀌는 것</th></tr></thead>
+    <tbody>
+      <tr><td>Desktop-S</td><td>1280px</td><td>본문 최대 너비 1280px 유지</td></tr>
+      <tr><td>Tablet</td><td>960px</td><td>4열 → 2열, 상단 링크는 메뉴 버튼으로 접힘</td></tr>
+      <tr><td>Mobile-L</td><td>768px</td><td>컬러 블록이 화면 끝까지 닿고 모서리가 없어짐, 좌우 여백 16px</td></tr>
+      <tr><td>Mobile</td><td>560px</td><td>display-xl 86px → 48px, 알약 버튼은 가로 전체</td></tr>
+      <tr><td>Mobile-XS</td><td>559px</td><td>푸터 1열</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ components ============ -->
+<section class="container block" id="components">
+  <div class="sec-head">
+    <p class="t-eyebrow">05 · 컴포넌트</p>
+    <h2 class="t-display-lg">알약과 원, 그리고 색 면</h2>
+  </div>
+
+  <h3 class="t-card-title">버튼</h3>
+  <div class="tile-lg" style="margin-top:var(--s-md);display:flex;flex-wrap:wrap;gap:var(--s-md);align-items:center">
+    <button class="btn btn-primary btn-block-m" type="button">작품 올리기</button>
+    <button class="btn btn-secondary btn-block-m" type="button">나중에 할게요</button>
+    <button class="btn btn-tertiary" type="button">전시 규칙 보기</button>
+    <button class="btn btn-icon" type="button" aria-label="이전 작품">&larr;</button>
+    <button class="btn btn-icon" type="button" aria-label="다음 작품">&rarr;</button>
+  </div>
+  <div class="grid g3" style="margin-top:var(--s-md)">
+    <div class="stack t-body-sm"><p><code>button-primary</code> 검정 알약. 화면당 주 행동 하나에만.</p></div>
+    <div class="stack t-body-sm"><p><code>button-secondary</code> 흰 알약, 테두리 없음. 주 버튼의 짝.</p></div>
+    <div class="stack t-body-sm"><p><code>button-tertiary-text</code> · <code>button-icon-circular</code> 40px(터치 44px).</p></div>
+  </div>
+  <div class="cb cb-navy" style="margin-top:var(--s-lg);display:flex;gap:var(--s-md);align-items:center;flex-wrap:wrap;padding:var(--s-lg)">
+    <span class="t-body-sm">어두운 면 위: <code style="background:rgba(255,255,255,.12);color:#fff">button-icon-circular-inverse</code></span>
+    <button class="btn btn-icon btn-icon-inverse" type="button" aria-label="재생">&#9654;</button>
+    <button class="btn btn-icon btn-icon-inverse" type="button" aria-label="정지">&#10074;&#10074;</button>
+  </div>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">탭 (pill toggle)</h3>
+  <div style="margin-top:var(--s-md)">
+    <div class="tabs" role="tablist" aria-label="결과 종류">
+      <button class="tab" role="tab" aria-selected="true" type="button">전체</button>
+      <button class="tab" role="tab" aria-selected="false" type="button">움직이는 그림</button>
+      <button class="tab" role="tab" aria-selected="false" type="button">2.5D 부조</button>
+      <button class="tab" role="tab" aria-selected="false" type="button">원본 액자</button>
+    </div>
+    <p class="t-body-sm" style="margin-top:var(--s-sm)">선택된 탭은 주 버튼과 같은 검정 면이다. 색 있는 탭으로 바꾸지 않는다.</p>
+  </div>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">입력</h3>
+  <div class="grid g3" style="margin-top:var(--s-md)">
+    <div class="field"><label for="f1">작품 제목</label><input id="f1" class="input" placeholder="예: 바다에 간 날"></div>
+    <div class="field"><label for="f2">제작일 <span class="t-caption">초점</span></label><input id="f2" class="input is-focus" value="2026-09-21"></div>
+    <div class="field"><label for="f3">제작 당시 연령 <span class="tag-proposal t-caption">제안</span></label><input id="f3" class="input is-error" value="21" aria-invalid="true" aria-describedby="f3h"><p id="f3h" class="hint">만 나이 0~18 사이로 적어 주세요.</p></div>
+  </div>
+  <p class="t-body-sm" style="margin-top:var(--s-sm)">초점은 채움이 아니라 검정 링(2px)으로 표시한다. 오류 상태는 DESIGN.md에 없어서 "검정 링 + 안내 문장"을 제안한다. 색만으로 오류를 알리지 않는다.</p>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">카드 · 타일</h3>
+  <div class="grid g3" style="margin-top:var(--s-md)">
+    <div class="card stack">
+      <p class="t-caption">pricing-card → 안내 카드</p>
+      <h4 class="t-card-title">한 번 올리면 세 가지 중 하나</h4>
+      <div>
+        <div class="row"><span>움직이는 그림</span><span class="check" aria-label="지원">&#10003;</span></div>
+        <div class="row"><span>2.5D 부조</span><span class="check" aria-label="지원">&#10003;</span></div>
+        <div class="row" style="border-bottom:0"><span>원본 액자</span><span class="check" aria-label="지원">&#10003;</span></div>
+      </div>
+    </div>
+    <div class="tile stack"><p class="t-caption">template-card</p><div style="aspect-ratio:4/3;background:var(--color-canvas);border-radius:var(--r-md)"></div><p class="t-body-sm">회색 바탕 타일. 썸네일 모음에 쓴다.</p></div>
+    <div class="tile-lg stack"><p class="t-eyebrow">feature tile</p><p class="t-body-sm">큰 조합 타일. 화면 예시나 일러스트를 담는다.</p></div>
+  </div>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">프로모 배너</h3>
+  <div class="promo" style="margin-top:var(--s-md)">
+    <span>새 기능: 키워드로 작품 설명 초안 받기(P0.5)가 준비되면 여기서 알려 드려요.</span>
+    <button class="btn btn-magenta" type="button">소식 받기</button>
+  </div>
+  <p class="t-body-sm" style="margin-top:var(--s-sm)">마젠타 버튼은 페이지당 한 번만 쓴다.</p>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">컬러 블록 섹션 (대표 컴포넌트)</h3>
+  <p class="t-body-sm" style="margin-top:var(--s-sm)">아래는 비교를 위해 모아 둔 것이다. 실제 화면에서는 한 화면에 하나만 보이게 흰 여백으로 떼어 놓는다.</p>
+  <div class="grid g3" style="margin-top:var(--s-md)" id="blocks"></div>
+</section>
+
+<!-- ============ patterns ============ -->
+<section class="container block" id="patterns">
+  <div class="sec-head">
+    <p class="t-eyebrow">06 · 적용 예시 <span class="tag-proposal t-caption">제안</span></p>
+    <h2 class="t-display-lg">우리 아이 미술관 화면</h2>
+    <p class="t-body-lg" style="max-width:860px">명세(spec v2.1)와 업무규칙을 지키도록 Figma 언어를 옮긴 예시다. 점수는 보이지 않고, 원본 액자에 실패 표시를 붙이지 않으며, 아이의 한마디와 AI 설명을 섞지 않는다.</p>
+  </div>
+
+  <h3 class="t-card-title">판정 제안과 보호자 확정</h3>
+  <div class="tile-lg stack" style="margin-top:var(--s-md)">
+    <p class="t-body">이 작품은 <b style="font-weight:540">움직이는 그림</b>으로 만들어 볼까요? 다른 방식도 고를 수 있어요.</p>
+    <div class="suggest" role="group" aria-label="전시 방식 고르기">
+      <button class="chip-opt" type="button" aria-pressed="true">움직이는 그림<span class="sub">제안</span></button>
+      <button class="chip-opt" type="button" aria-pressed="false">2.5D 부조</button>
+      <button class="chip-opt" type="button" aria-pressed="false">원본 액자</button>
+    </div>
+    <div style="display:flex;gap:var(--s-md);flex-wrap:wrap"><button class="btn btn-primary btn-block-m" type="button">이대로 만들기</button><button class="btn btn-secondary btn-block-m" type="button">다시 찍기</button></div>
+    <p class="t-body-sm">점수·확률은 보이지 않는다(BR-SUG-02). 제안은 "제안" 라벨 하나로만 표시하고 다른 선택을 막지 않는다(BR-SUG-03).</p>
+  </div>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">처리 상태</h3>
+  <div class="tile-lg" style="margin-top:var(--s-md);display:flex;gap:var(--s-sm);flex-wrap:wrap">
+    <span class="status is-quiet"><span class="dot"></span>접수됨</span>
+    <span class="status"><span class="dot"></span>처리 중</span>
+    <span class="status"><span class="dot"></span>다시 시도하는 중</span>
+    <span class="status"><span class="dot"></span>확인 대기</span>
+    <span class="status"><span class="dot"></span>처리하지 못했어요</span>
+  </div>
+  <p class="t-body-sm" style="margin-top:var(--s-sm)">상태는 색이 아니라 모노체 라벨과 점 모양으로 구분한다. 빨강·노랑 같은 새 강조색을 들이지 않는다. 상태 배지와 낮춤 안내는 진행·결과 확인 화면(UC3·UC4)에서만 보인다. 전시 화면에는 낮춤 원인과 결과 원인을 표시하지 않는다(D3 · BR-EXH-07).</p>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">가족 전시 — 아이별 · 연령 묶음 · 제작일 순</h3>
+  <div class="tabs" role="tablist" aria-label="아이 고르기" style="margin-top:var(--s-md)">
+    <button class="tab" role="tab" aria-selected="true" type="button">하늘</button>
+    <button class="tab" role="tab" aria-selected="false" type="button">바다</button>
+  </div>
+  <div class="age-head"><span class="t-eyebrow">만 5세</span><span class="t-body-sm">3점</span></div>
+  <div class="grid g3" id="gallery"></div>
+  <p class="t-body-sm" style="margin-top:var(--s-md)">원본 액자도 움직이는 그림과 같은 크기, 같은 카드로 건다. "실패"·"대체" 표시를 붙이지 않는다(BR-EXH-04). 재생은 고를 때만 한다(BR-EXH-03).</p>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">작품 상세 — 아이의 말과 AI 설명 분리</h3>
+  <div class="cb cb-cream full-bleed-m" style="margin-top:var(--s-md)">
+    <div class="grid g2" style="align-items:start">
+      <figure style="margin:0;aspect-ratio:4/3;background:var(--color-canvas);border-radius:var(--r-md);display:grid;place-items:center" aria-label="작품 자리">
+        <svg viewBox="0 0 200 150" width="70%" role="img" aria-label="파란 물결과 해 그림 예시"><path d="M10 110 Q35 90 60 110 T110 110 T160 110 T200 110" fill="none" stroke="#000" stroke-width="4"/><circle cx="150" cy="40" r="18" fill="none" stroke="#000" stroke-width="4"/></svg>
+      </figure>
+      <div class="stack">
+        <p class="t-caption">2026-09-21 · 만 5세 · 움직이는 그림</p>
+        <h4 class="t-headline">바다에 간 날</h4>
+        <p class="quote">“파도가 나를 따라왔어.”</p>
+        <p class="t-caption">아이의 한마디 · 입력한 글자 그대로</p>
+        <div class="card" style="border-radius:var(--r-md);margin-top:var(--s-md)">
+          <span class="ai-mark">AI 작성 · P0.5</span>
+          <p class="t-body-sm" style="margin-top:var(--s-sm)">파란 물결 위로 해가 떠 있는 바다 그림이다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="t-body-sm" style="margin-top:var(--s-md)">아이의 한마디는 큰 본문으로 먼저 보이고, AI 설명은 "AI 작성" 표시가 붙은 별도 카드에 둔다(BR-CAP, D6).</p>
+</section>
+
+<!-- ============ 상태 컴포넌트 (D22 시안) ============ -->
+<section class="container block" id="states">
+  <div class="sec-head">
+    <p class="t-eyebrow">06-1 · 상태 컴포넌트 <span class="tag-proposal t-caption">시안 · D22 · 신지현 검토</span></p>
+    <h2 class="t-display-lg">막힘은 색이 아니라 모양으로</h2>
+    <p class="t-body-lg" style="max-width:860px">SD_02 §3-5의 사상을 그대로 그린 시안이다. 빨강은 쓰지 않고, 마젠타는 상태에 쓰지 않는다. 차단은 굵은 실선, 보류는 점선과 크림 면, 종결은 회색 면이다. 모든 상태는 문구를 함께 적는다.</p>
+  </div>
+
+  <h3 class="t-card-title">C1 진행 레일</h3>
+  <div class="tile-lg stack" style="margin-top:var(--s-md)">
+    <ol class="rail" aria-label="작품 진행 - 기본">
+      <li>접수됨</li><li>판정 중</li><li class="is-now" aria-current="step">확정 대기</li><li>처리 중</li><li>확인 대기</li><li>승인됨</li><li>전시 중</li>
+    </ol>
+    <ol class="rail" aria-label="작품 진행 - 막힘">
+      <li>접수됨</li><li>판정 중</li><li>확정 대기</li><li>처리 중</li><li class="is-blocked" aria-current="step">처리하지 못함<span class="gate">G9</span></li><li>승인됨</li><li>전시 중</li>
+    </ol>
+    <p class="t-body-sm">현재 단계는 검정 알약, 막힌 단계는 굵은 테두리 알약에 게이트 번호를 붙인다. 레일 단계는 누를 수 없다.</p>
+  </div>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">C2 차단 블록 · C3 이유 달린 비활성 버튼 · C6 낮춤 안내</h3>
+  <div class="grid g2" style="margin-top:var(--s-md)">
+    <div class="gblock is-block" role="alert">
+      <p class="head">막힘<span class="gate">G11</span></p>
+      <dl><dt>사유</dt><dd>그린 날은 오늘 이후일 수 없어요</dd><dt>해제 주체</dt><dd>보호자 - 지금 이 화면</dd></dl>
+      <div class="acts"><button class="btn btn-secondary" type="button">그린 날 고치기</button><button class="btn" type="button" aria-disabled="true">저장<span class="why">(비활성) - 그린 날을 고쳐 주세요</span></button></div>
+    </div>
+    <div class="gblock is-hold" role="status">
+      <p class="head">기다리는 중<span class="gate">G19</span></p>
+      <dl><dt>사유</dt><dd>만들던 작업이 멈추기를 기다리는 중이에요</dd><dt>해제 주체</dt><dd>시스템 - 멈춤 확인 또는 시간 상한</dd></dl>
+      <div class="acts"><span class="t-body-sm">기다리지 않아도 돼요</span><button class="btn btn-secondary" type="button">목록으로</button></div>
+    </div>
+    <div class="gblock is-final">
+      <p class="head">되돌릴 수 없어요</p>
+      <dl><dt>사유</dt><dd>삭제 중인 작품이에요</dd><dt>해제 주체</dt><dd>없음</dd></dl>
+      <div class="acts"><button class="btn btn-secondary" type="button">목록으로</button></div>
+    </div>
+    <div class="downgrade">움직이는 그림을 만들지 못해 <b style="font-weight:540">2.5D 부조로 바꿨어요.</b> 원본 액자로 걸 수도 있어요.</div>
+  </div>
+  <p class="t-body-sm" style="margin-top:var(--s-sm)">블록이 나타나면 제목으로 포커스를 옮기고 사유와 해제 주체를 낭독한다. 비활성 버튼은 <code>aria-disabled</code>로 두어 포커스를 받고, 라벨 뒤에 사유를 붙인다. 토스트나 저절로 사라지는 배너는 쓰지 않는다.</p>
+
+  <h3 class="t-card-title" style="margin-top:var(--s-xxl)">C10 모델 상태 칩</h3>
+  <div class="tile-lg" style="margin-top:var(--s-md);display:flex;gap:var(--s-sm);flex-wrap:wrap;align-items:center">
+    <span class="mchip ready">준비됨</span>
+    <span class="mchip not-ready">미준비</span>
+    <span class="mchip loading">불러오는 중 <span class="bar" aria-hidden="true"></span> 12초 / 약 20초</span>
+    <span class="mchip failed">적재 실패 · 60초마다 다시 시도</span>
+    <span class="mchip cold">내려감 짐작 · 첫 요청 때 올라가요</span>
+    <span class="mchip inactive">비활성 · 라이선스 확인 전</span>
+    <span class="mchip cpu">CPU 실행</span>
+    <span class="mchip hidden">비노출 · P1</span>
+    <span class="mchip unknown">확인 불가</span>
+  </div>
+  <p class="t-body-sm" style="margin-top:var(--s-sm)">채움 · 빈 칸 · 굵은 테두리 · 사선 · 점선 · 회색 면으로 서로 다르게 보이고, 문구가 늘 함께 있다. "불러오는 중"은 오류가 아니므로 막대에 민트를 쓴다.</p>
+</section>
+
+<!-- ============ do / don't ============ -->
+<section class="container block" id="rules">
+  <div class="sec-head">
+    <p class="t-eyebrow">07 · 해야 할 것 · 하지 말 것</p>
+    <h2 class="t-display-lg">지키는 선</h2>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3 class="t-headline">해야 할 것</h3><ul class="dd t-body" style="margin-top:var(--s-md);padding:0">
+      <li>검정 주 버튼은 화면당 하나. 둘이 보이면 하나를 흰 버튼으로 바꾼다.</li>
+      <li>새 구간은 먼저 어떤 컬러 블록에 둘지 정한다.</li>
+      <li>컬러 블록 사이에는 반드시 흰 여백(96px)을 둔다.</li>
+      <li>굵기는 320 · 330 · 340 · 480 · 540 · 700 중에서 고른다.</li>
+      <li>모노체는 대문자·양의 자간으로 라벨에만 쓴다.</li>
+      <li>상태와 오류는 색과 함께 문장이나 모양으로도 알린다.</li>
+    </ul></div>
+    <div class="card"><h3 class="t-headline">하지 말 것</h3><ul class="dd t-body" style="margin-top:var(--s-md);padding:0">
+      <li>회색 본문 글자를 쓰지 않는다. 위계는 굵기로 만든다.</li>
+      <li>컬러 블록에 그림자를 넣지 않는다.</li>
+      <li>팔레트 밖 색(주황, 빨강 경고 등)을 들이지 않는다.</li>
+      <li>한 화면에 컬러 블록 둘을 동시에 보이지 않는다.</li>
+      <li>네모 버튼을 만들지 않는다.</li>
+      <li>점수, 발달 평가, 아이 간 비교를 보여 주지 않는다.</li>
+    </ul></div>
+  </div>
+</section>
+</main>
+
+<footer class="site">
+  <div class="container">
+    <p class="t-display-lg" style="margin-bottom:var(--s-xxl)">우리 아이 미술관</p>
+    <div class="cols">
+      <div><p class="t-caption">문서</p><ul><li>DESIGN.md (figma)</li><li>스타일가이드 메뉴얼</li><li>SD_01 프로세스 설계서</li></ul></div>
+      <div><p class="t-caption">명세</p><ul><li>spec v2.1</li><li>UC_ALL 통합 명세</li><li>REF 공통 기준</li></ul></div>
+      <div><p class="t-caption">담당</p><ul><li>C 보호자 경험 · 설명</li><li>SD_02 UI/UX (C3)</li></ul></div>
+      <div><p class="t-caption">버전</p><ul><li>v0.1 · 2026-09-28</li><li>DESIGN.md alpha</li></ul></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=getComputedStyle(document.documentElement);
+  function v(n){return root.getPropertyValue(n).trim();}
+  function lum(h){h=h.replace('#','');var c=[0,2,4].map(function(i){var x=parseInt(h.substr(i,2),16)/255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);});return .2126*c[0]+.7152*c[1]+.0722*c[2];}
+  function cr(a,b){var x=lum(a),y=lum(b);var hi=Math.max(x,y),lo=Math.min(x,y);return (hi+.05)/(lo+.05);}
+  function sw(id,list){
+    var el=document.getElementById(id); if(!el) return;
+    list.forEach(function(t){
+      var hex=v('--color-'+t[0]); var ink=cr(hex,'#000000')>=cr(hex,'#ffffff')?'#000000':'#ffffff';
+      var d=document.createElement('div'); d.className='swatch';
+      d.innerHTML='<div class="chip" style="background:'+hex+';color:'+ink+'"><span class="t-caption">'+hex+'</span></div>'+
+        '<div class="meta"><b>'+t[0]+'</b><span>'+t[1]+'</span><span class="t-caption">검정 '+cr(hex,'#000000').toFixed(2)+' · 흰색 '+cr(hex,'#ffffff').toFixed(2)+'</span></div>';
+      el.appendChild(d);
+    });
+  }
+  sw('sw-brand',[['primary','주 버튼 · 선택 탭'],['on-primary','검정 위 글자'],['ink','모든 글자'],['inverse-ink','어두운 면 위 글자']]);
+  sw('sw-surface',[['canvas','기본 배경 · 카드'],['surface-soft','타일 · 아이콘 버튼'],['hairline','카드·입력 1px 선'],['hairline-soft','표 행 구분선'],['inverse-canvas','마퀴 띠']]);
+  sw('sw-block',[['block-lime','원칙 · 안내 · 도움말'],['block-lilac','새 소식 · 프로모'],['block-cream','작품 상세'],['block-mint','가족 이야기 구간'],['block-pink','추억 모음 구간'],['block-coral','팀·운영 안내'],['block-navy','재생 무대(어두운 면)']]);
+  sw('sw-accent',[['accent-magenta','페이지당 한 번 프로모'],['semantic-success','체크 아이콘'],['overlay-scrim','모달 뒤 60%'],['on-inverse-soft','어두운 면 원형 버튼(16%)']]);
+
+  var T=[['display-xl','86 / 340 / 1.00 / -1.72','우리 아이 미술관'],['display-lg','64 / 340 / 1.10 / -0.96','작품이 먼저 보이게'],['headline','26 / 540 / 1.35 / -0.26','바다에 간 날'],['subhead','26 / 340 / 1.35 / -0.26','사진 한 장이면 작품이 됩니다.'],['card-title','24 / 700 / 1.45 / 0','한 번 올리면 세 가지 중 하나'],['body-lg','20 / 330 / 1.40 / -0.14','제목, 제작일, 제작 당시 연령을 적어 주세요.'],['body','18 / 320 / 1.45 / -0.26','입력한 말은 한 글자도 바꾸지 않고 그대로 보여 줍니다.'],['body-sm','16 / 330 / 1.45 / -0.14','원본 액자도 완성된 작품으로 겁니다.'],['link','20 / 480 / 1.40 / -0.10','전시 규칙 보기'],['button','20 / 480 / 1.40 / -0.10','작품 올리기'],['eyebrow','18 / 400 / 1.30 / 0.54 · mono','만 5세 · 3점'],['caption','12 / 400 / 1.00 / 0.60 · mono','2026-09-21 · 확인 대기']];
+  var box=document.getElementById('type-specs');
+  T.forEach(function(t){var r=document.createElement('div');r.className='spec';r.innerHTML='<div><p class="t-body-sm" style="font-weight:540">'+t[0]+'</p><p class="t-caption" style="margin-top:8px">'+t[1]+'</p></div><p class="sample t-'+t[0]+'">'+t[2]+'</p>';box.appendChild(r);});
+
+  var S=[['hair',1],['xxs',4],['xs',8],['sm',12],['md',16],['lg',24],['xl',32],['xxl',48],['section',96]];
+  var sp=document.getElementById('spacing');
+  S.forEach(function(s){var r=document.createElement('div');r.className='scale-row';r.innerHTML='<span>spacing.'+s[0]+'</span><span class="t-caption">'+s[1]+'px</span><div class="bar" style="width:'+Math.min(s[1]*2.5,100)+'%;max-width:'+(s[1]*2.5)+'px"></div>';sp.appendChild(r);});
+
+  var R=[['xs',2,'링크 장식'],['sm',6,'작은 칩'],['md',8,'입력 · 이미지'],['lg',24,'카드 · 컬러 블록'],['xl',32,'큰 강조 패널'],['pill',50,'모든 글자 버튼'],['full',9999,'원형 아이콘 버튼']];
+  var rd=document.getElementById('radii');
+  R.forEach(function(r){var d=document.createElement('div');d.className='rad';d.style.borderRadius=Math.min(r[1],44)+'px';d.innerHTML='<div><p class="t-body-sm" style="font-weight:540">rounded.'+r[0]+'</p><p class="t-caption" style="margin-top:6px">'+r[1]+'px · '+r[2]+'</p></div>';rd.appendChild(d);});
+
+  var B=[['lime','원칙 · 도움말'],['lilac','새 소식'],['cream','작품 상세'],['mint','가족 이야기'],['pink','추억 모음'],['coral','운영 안내'],['navy','재생 무대']];
+  var bl=document.getElementById('blocks');
+  B.forEach(function(b){var d=document.createElement('div');d.className='cb cb-'+b[0];d.style.padding='var(--s-lg)';d.innerHTML='<p class="t-caption">color-block-section'+(b[0]==='lime'?'':'-'+b[0])+'</p><p class="t-headline" style="margin-top:12px">'+b[1]+'</p>';bl.appendChild(d);});
+
+  var arts=[
+    ['바다에 간 날','2026-03-02','움직이는 그림','“파도가 나를 따라왔어.”','<path d="M10 110 Q35 90 60 110 T110 110 T160 110 T200 110" fill="none" stroke="#000" stroke-width="4"/><circle cx="150" cy="40" r="18" fill="none" stroke="#000" stroke-width="4"/>'],
+    ['우리 집','2026-05-14','원본 액자','“지붕은 빨간색이야.”','<path d="M40 130 V70 L100 25 L160 70 V130 Z" fill="none" stroke="#000" stroke-width="4"/><rect x="85" y="90" width="30" height="40" fill="none" stroke="#000" stroke-width="4"/>'],
+    ['점토 고양이','2026-08-30','2.5D 부조','','<ellipse cx="100" cy="95" rx="55" ry="38" fill="none" stroke="#000" stroke-width="4"/><path d="M60 65 L70 35 L85 60 M140 65 L130 35 L115 60" fill="none" stroke="#000" stroke-width="4"/>']
+  ];
+  var g=document.getElementById('gallery');
+  arts.forEach(function(a){var d=document.createElement('article');d.className='art';d.innerHTML='<figure><svg viewBox="0 0 200 150" role="img" aria-label="'+a[0]+' 그림 예시">'+a[4]+'</svg></figure><p class="t-caption">'+a[1]+' · '+a[2]+'</p><p class="title">'+a[0]+'</p>'+(a[3]?'<p class="words">'+a[3]+'</p>':'');g.appendChild(d);});
+
+  document.querySelectorAll('.tabs').forEach(function(tl){tl.addEventListener('click',function(e){var t=e.target.closest('.tab');if(!t)return;tl.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected',x===t?'true':'false');});});});
+  document.querySelectorAll('.suggest').forEach(function(s){s.addEventListener('click',function(e){var c=e.target.closest('.chip-opt');if(!c)return;s.querySelectorAll('.chip-opt').forEach(function(x){x.setAttribute('aria-pressed',x===c?'true':'false');});});});
+})();
+</script>
+</body>
+</html>

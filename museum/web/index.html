@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>우리 아이 미술관</title>
+    <style>
+      /* 첫 장면 판(D31, SD_02 §17-6 성능) — JS · 이미지 · 글꼴 파일 없이 HTML과 함께 바로 뜬다. 앱이 뜨면 #app 내용이 바뀌며 사라진다. */
+      .uam-splash{position:fixed;inset:0;display:grid;place-items:center;text-align:center;font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:#6e3550;
+        background:linear-gradient(180deg,transparent 0 58%,#f7eef0 58% 100%),
+          repeating-radial-gradient(ellipse 100% 70% at 50% 58%,#fff6ea 0 22px,#f3e2b4 22px 30px),#fff6ea}
+      .uam-splash p{margin:0;width:min(72vw,380px);padding:clamp(48px,10vh,90px) 16px clamp(40px,8vh,70px);background:#fffbf7;border:3px solid #e8d08a;border-bottom:0;border-radius:999px 999px 18px 18px;box-shadow:0 18px 50px -30px rgba(74,58,99,.45)}
+      .uam-splash b{display:block;font:600 clamp(22px,5.4vw,38px)/1.2 "AppleMyungjo","Nanum Myeongjo",serif}
+      .uam-splash span{display:block;margin-top:10px;font-size:15px;animation:uam-blink 1.6s ease-in-out infinite alternate}
+      @keyframes uam-blink{from{opacity:.55}to{opacity:1}}
+      @media (prefers-reduced-motion:reduce){.uam-splash span{animation:none}}
+    </style>
+  </head>
+  <body>
+    <div id="app"><div class="uam-splash" role="status"><p><b>우리 아이 미술관</b><span>미술관 문을 여는 중이에요</span></p></div></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

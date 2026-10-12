@@ -1,0 +1,7 @@
+# M4 판정 보조 규칙(모델 아님, R-22). 이 파일의 SHA-256이 M4 버전(config_hash)이다. [추론]
+# 관절 이름은 Animated Drawings char_cfg skeleton과 같다(head 없음 — neck이 코 위치).
+required_joints: [neck, torso, left_shoulder, right_shoulder, left_hand, right_hand, left_hip, right_hip, left_foot, right_foot]
+limb_symmetry_max_ratio: 1.8   # 좌우 팔·다리 길이 비가 이보다 크면 불통과
+torso_min_ratio: 0.15          # 몸통 길이 / 전체 높이 하한
+torso_max_ratio: 0.7
+min_height_px: 10

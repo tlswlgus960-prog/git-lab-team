@@ -1,0 +1,15 @@
+# 품질 임계값 — U5 확정 전에는 "명백한 실패"만 quality_below로 본다(FR-15). [추론]
+split:
+  min_foreground_ratio: 0.02   # 채운 마스크(D56) 전경이 2% 미만이면 분리 실패(split_fail)
+  max_foreground_ratio: 0.98   # 98% 초과면 배경을 못 뗀 것
+judge:
+  min_kind_score: 0.0          # 점수 단독으로 판정하지 않는다(BR-SUG-04). 기록만
+animate_render:
+  min_output_bytes: 1024       # 렌더 결과가 비었으면 품질 미달
+  # 렌더 뒤 모양 검사(D55) [추론] — 합성·평가 그림 7장 실측. U5에서 평가 묶음으로 다시 정한다
+  background_level: 235        # 세 채널 중 하나라도 이 값 미만이면 그림(전경)
+  piece_min_share: 0.02        # 전경의 2% 이상인 조각만 센다
+  max_torn_frame_ratio: 0.5    # 조각이 2개 이상인 프레임이 이 비율 이상이면 render_torn
+  max_area_ratio: 1.6          # 프레임 전경 면적 최대/최소가 이 값을 넘으면 render_distorted
+depth_relief:
+  min_depth_std: 0.5           # 깊이맵이 평평하면(표준편차 < 0.5/65535 단위 아님, 0~255 정규화 기준) 품질 미달

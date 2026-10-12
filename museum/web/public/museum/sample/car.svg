@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+<title>빨간 자동차 (견본 그림 — 팀이 코드로 그림)</title>
+<defs><filter id="c" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="13" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+<pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></pattern></defs>
+<rect width="400" height="300" fill="#FFFDF6"/><g filter="url(#c)" stroke-linecap="round" stroke-linejoin="round">
+<path d="M0 240 H400" stroke="#868E96" stroke-width="6"/><path d="M20 260 h40 M120 260 h40 M220 260 h40 M320 260 h40" stroke="#FFD43B" stroke-width="6"/>
+<path d="M70 200 v-40 q0 -10 10 -10 h60 l40 -40 h90 l40 40 h20 q10 0 10 10 v40z" fill="#FA5252" stroke="#C92A2A" stroke-width="5"/>
+<path d="M190 115 h70 l30 35 h-100z" fill="#D0EBFF" stroke="#1C7ED6" stroke-width="4"/>
+<circle cx="130" cy="205" r="28" fill="#495057" stroke="#212529" stroke-width="5"/><circle cx="290" cy="205" r="28" fill="#495057" stroke="#212529" stroke-width="5"/>
+<circle cx="130" cy="205" r="9" fill="#CED4DA"/><circle cx="290" cy="205" r="9" fill="#CED4DA"/>
+<circle cx="340" cy="165" r="8" fill="#FFE066"/>
+</g></svg>

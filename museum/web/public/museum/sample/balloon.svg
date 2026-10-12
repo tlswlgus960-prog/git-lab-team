@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+<title>하늘로 풍선 (견본 그림 — 팀이 코드로 그림)</title>
+<defs><filter id="c" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="10" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+<pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></pattern></defs>
+<rect width="400" height="300" fill="#FFFDF6"/><g filter="url(#c)" stroke-linecap="round" stroke-linejoin="round">
+<rect width="400" height="300" fill="#E7F5FF"/>
+<ellipse cx="120" cy="90" rx="34" ry="42" fill="#FF6B8B" stroke="#4A3441" stroke-width="4"/><path d="M120 132 q-10 40 80 118" stroke="#868E96" stroke-width="3" fill="none"/><ellipse cx="200" cy="60" rx="34" ry="42" fill="#FFD43B" stroke="#4A3441" stroke-width="4"/><path d="M200 102 q-10 40 0 148" stroke="#868E96" stroke-width="3" fill="none"/><ellipse cx="280" cy="95" rx="34" ry="42" fill="#69DB7C" stroke="#4A3441" stroke-width="4"/><path d="M280 137 q-10 40 -80 113" stroke="#868E96" stroke-width="3" fill="none"/><ellipse cx="170" cy="140" rx="34" ry="42" fill="#74C0FC" stroke="#4A3441" stroke-width="4"/><path d="M170 182 q-10 40 30 68" stroke="#868E96" stroke-width="3" fill="none"/>
+<path d="M180 250 h40 l-8 30 h-24z" fill="#C4632A" stroke="#8A3B2E" stroke-width="4"/>
+</g></svg>
